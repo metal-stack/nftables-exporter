@@ -61,7 +61,7 @@ func mineUnit(key string, record map[string]interface{}) {
 }
 
 func mineTable(record map[string]interface{}) {
-	fmt.Printf(" [table] %s\n", record)
+	// fmt.Printf(" [table] %s\n", record)
 	tableChains.WithLabelValues(record["name"].(string), record["family"].(string)).Set(0)
 }
 
@@ -72,14 +72,42 @@ func mineChain(record map[string]interface{}) {
 }
 
 func mineRule(record map[string]interface{}) {
-	fmt.Printf(" [rule] %s\n", record)
-	chainRules.WithLabelValues(record["chain"].(string), record["family"].(string), record["table"].(string)).Add(1)
+	// fmt.Printf(" [rule] %s\n", record)
+	chainName := record["chain"].(string)
+	familyName := record["family"].(string)
+	tableName := record["table"].(string)
+	chainRules.WithLabelValues(chainName, familyName, tableName).Add(1)
+	if record["comment"] != nil {
+		ruleComment := record["comment"].(string)
+		var counters map[string]interface{}
+		counterType := "chain_exit"
+		for _, record := range record["expr"].([]interface{}) {
+			if rec, ok := record.(map[string]interface{}); ok {
+				for key, val := range rec {
+					// fmt.Printf(" [expr] %s, %+v\n", key, val)
+					switch key {
+					case "counter":
+						counters = val.(map[string]interface{})
+					case "accept":
+						counterType = "rule_accept"
+					case "drop":
+						counterType = "rule_drop"
+					}
+				}
+			}
+		}
+		if counters != nil {
+			ruleBytes.WithLabelValues(chainName, familyName, tableName, ruleComment, counterType).Add(counters["bytes"].(float64))
+			rulePackets.WithLabelValues(chainName, familyName, tableName, ruleComment, counterType).Add(counters["packets"].(float64))
+		}
+		// ruleBytes(record["chain"].(string), record["family"].(string), record["table"].(string), record["comment"].(string)).set(record["comment"])
+	}
 }
 
 var (
 	tableChains = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "nftables_table_chains_count",
+			Name: "nftables_table_chains",
 			Help: "Count chains in table",
 		},
 		[]string{
@@ -89,7 +117,7 @@ var (
 	)
 	chainRules = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "nftables_chain_rules_count",
+			Name: "nftables_chain_rules",
 			Help: "Count rules in chain",
 		},
 		[]string{
@@ -98,11 +126,39 @@ var (
 			"table",
 		},
 	)
+	ruleBytes = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "nftables_rule_bytes",
+			Help: "Bytes, matched by rule",
+		},
+		[]string{
+			"chain",
+			"family",
+			"table",
+			"comment",
+			"type",
+		},
+	)
+	rulePackets = prometheus.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "nftables_rule_packets",
+			Help: "Packets, matched by rule",
+		},
+		[]string{
+			"chain",
+			"family",
+			"table",
+			"comment",
+			"type",
+		},
+	)
 )
 
 func init() {
 	prometheus.MustRegister(tableChains)
 	prometheus.MustRegister(chainRules)
+	prometheus.MustRegister(ruleBytes)
+	prometheus.MustRegister(rulePackets)
 }
 
 func main() {
