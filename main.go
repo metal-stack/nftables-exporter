@@ -2,49 +2,98 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
+	"flag"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"gopkg.in/yaml.v2"
 )
 
-func readJSON() []interface{} {
-	fmt.Println("Open")
-	jsonFile, oerr := os.Open("nft.json")
-	if oerr != nil {
-		fmt.Println(oerr)
-	}
-	fmt.Println("Read")
-	byteValue, rerr := ioutil.ReadAll(jsonFile)
-	if rerr != nil {
-		fmt.Println(rerr)
-	}
-	fmt.Println("Close")
-	defer jsonFile.Close()
+// Options is a representation of a options
+type Options struct {
+	NftablesExporter struct {
+		BindTo             string `yaml:"bind_to"`
+		URLPath            string `yaml:"url_path"`
+		EvaluationInterval string `yaml:"evaluation_interval"`
+		FakeNftJSON        string `yaml:"fake_nft_json"`
+	} `yaml:"nftables_exporter"`
+}
 
-	// fmt.Println(byteValue)
+func readOptions() {
+	configFile := flag.String("config", "/etc/nftables_exporter.yaml", "Path to nftables_exporter config file")
+	flag.Parse()
 
+	log.Printf("Read options from %s\n", *configFile)
+	yamlFile, err := ioutil.ReadFile(*configFile)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	err = yaml.Unmarshal(yamlFile, &options)
+	log.Println(options)
+	if err != nil {
+		log.Fatalln(err)
+	}
+}
+
+func unmarshallJSON(data []byte) []interface{} {
 	var result map[string]interface{}
-	jerr := json.Unmarshal(byteValue, &result)
+	jerr := json.Unmarshal(data, &result)
 	if jerr != nil {
-		fmt.Println(jerr)
+		log.Fatalln(jerr)
 	}
 	// fmt.Printf("Result:  %+v\n", result)
-	return result["nftables"].([]interface{})
+	if result["nftables"] != nil {
+		return result["nftables"].([]interface{})
+	}
+	return nil
+}
+
+func readJSON() []interface{} {
+	log.Printf("Read nft json from %s\n", options.NftablesExporter.FakeNftJSON)
+	jsonFile, err := ioutil.ReadFile(options.NftablesExporter.FakeNftJSON)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	return unmarshallJSON(jsonFile)
+}
+
+func readNFTables() []interface{} {
+	log.Println("readNFTables")
+
+	out, err := exec.Command("/sbin/nft", "-j", "list", "ruleset").Output()
+	if err != nil {
+		log.Fatal("err: ", err)
+	}
+
+	return unmarshallJSON(out)
+}
+
+func readData() []interface{} {
+	if _, err := os.Stat(options.NftablesExporter.FakeNftJSON); err == nil {
+		return readJSON()
+	}
+	return readNFTables()
 }
 
 func recordMetrics() {
-	data := readJSON()
-	for _, record := range data {
-		if rec, ok := record.(map[string]interface{}); ok {
-			for key, val := range rec {
-				mineUnit(key, val.(map[string]interface{}))
+	data := readData()
+	if data != nil {
+		for _, record := range data {
+			if rec, ok := record.(map[string]interface{}); ok {
+				for key, val := range rec {
+					mineUnit(key, val.(map[string]interface{}))
+				}
 			}
+			// fmt.Println(record)
 		}
-		// fmt.Println(record)
 	}
 }
 
@@ -105,6 +154,8 @@ func mineRule(record map[string]interface{}) {
 }
 
 var (
+	options Options
+
 	tableChains = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
 			Name: "nftables_table_chains",
@@ -155,6 +206,10 @@ var (
 )
 
 func init() {
+	readOptions()
+
+	log.Printf("Starting on %s%s\n", options.NftablesExporter.BindTo, options.NftablesExporter.URLPath)
+
 	prometheus.MustRegister(tableChains)
 	prometheus.MustRegister(chainRules)
 	prometheus.MustRegister(ruleBytes)
@@ -162,8 +217,20 @@ func init() {
 }
 
 func main() {
-	recordMetrics()
-	fmt.Println("Socket")
-	http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(":2112", nil)
+	evaluationIntervalSec, derr := time.ParseDuration(options.NftablesExporter.EvaluationInterval)
+	log.Printf("%+v\n", evaluationIntervalSec)
+	if derr != nil {
+		log.Fatalln(derr)
+	}
+
+	go func() {
+		for {
+			recordMetrics()
+			time.Sleep(time.Duration(evaluationIntervalSec.Seconds()) * time.Second)
+		}
+	}()
+
+	log.Println("Listen up")
+	http.Handle(options.NftablesExporter.URLPath, promhttp.Handler())
+	log.Fatal(http.ListenAndServe(options.NftablesExporter.BindTo, nil))
 }
