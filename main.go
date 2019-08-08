@@ -1,17 +1,20 @@
 package main
 
 import (
-	"encoding/json"
+	"errors"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/tidwall/gjson"
 	"gopkg.in/yaml.v2"
 )
 
@@ -25,204 +28,272 @@ type Options struct {
 	} `yaml:"nftables_exporter"`
 }
 
+// Rule - chain rule
+type Rule struct {
+	Chain      string
+	Table      string
+	Family     string
+	Comment    string
+	Interfaces struct {
+		Input  []string
+		Output []string
+	}
+	Addresses struct {
+		Source      []string
+		Destination []string
+	}
+	Ports struct {
+		Source      []string
+		Destination []string
+	}
+	Couters struct {
+		Bytes   float64
+		Packets float64
+	}
+}
+
+// NewRule is Rule constructor
+func NewRule(chain string, family string, table string) Rule {
+	rule := Rule{}
+	rule.Chain = chain
+	rule.Family = family
+	rule.Table = table
+	rule.Comment = "empty"
+	return rule
+}
+
+func arrayToTag(values []string) string {
+	if len(values) == 0 {
+		return "any"
+	}
+	return strings.Join(values, ",")
+}
+
+// Parse options from yaml config file
 func readOptions() {
 	configFile := flag.String("config", "/etc/nftables_exporter.yaml", "Path to nftables_exporter config file")
 	flag.Parse()
 
-	log.Printf("Read options from %s\n", *configFile)
+	fmt.Printf("Read options from %s\n", *configFile)
 	yamlFile, err := ioutil.ReadFile(*configFile)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	err = yaml.Unmarshal(yamlFile, &options)
-	log.Println(options)
+	// fmt.Println(options)
 	if err != nil {
 		log.Fatalln(err)
 	}
 }
 
-func unmarshallJSON(data []byte) []interface{} {
-	var result map[string]interface{}
-	jerr := json.Unmarshal(data, &result)
-	if jerr != nil {
-		log.Fatalln(jerr)
+// Parse json to gjson object
+func parseJSON(data string) (gjson.Result, error) {
+	if !gjson.Valid(data) {
+		return gjson.Parse("{}"), errors.New("Invalid JSON")
 	}
-	// fmt.Printf("Result:  %+v\n", result)
-	if result["nftables"] != nil {
-		return result["nftables"].([]interface{})
-	}
-	return nil
+	return gjson.Get(data, "nftables"), nil
 }
 
-func readJSON() []interface{} {
-	log.Printf("Read nft json from %s\n", options.NftablesExporter.FakeNftJSON)
+// Reading fake nftables json
+func readFakeNFTables() (gjson.Result, error) {
+	fmt.Printf("Read nft json from %s\n", options.NftablesExporter.FakeNftJSON)
 	jsonFile, err := ioutil.ReadFile(options.NftablesExporter.FakeNftJSON)
 	if err != nil {
-		log.Fatalln(err)
+		log.Fatal("Fake NFTables reading error: ", err)
 	}
-
-	return unmarshallJSON(jsonFile)
+	return parseJSON(string(jsonFile))
 }
 
-func readNFTables() []interface{} {
-	log.Println("readNFTables")
-
+// Get json from nftables and parse it
+func readNFTables() (gjson.Result, error) {
+	// fmt.Println("Reading NFTables")
 	out, err := exec.Command("/sbin/nft", "-j", "list", "ruleset").Output()
 	if err != nil {
-		log.Fatal("err: ", err)
+		log.Fatal("NFTables reading error: ", err)
 	}
-
-	return unmarshallJSON(out)
+	return parseJSON(string(out))
 }
 
-func readData() []interface{} {
+// Select json source and parse
+func readData() (gjson.Result, error) {
 	if _, err := os.Stat(options.NftablesExporter.FakeNftJSON); err == nil {
-		return readJSON()
+		return readFakeNFTables()
 	}
 	return readNFTables()
 }
 
+// Worker
 func recordMetrics() {
-	data := readData()
-	if data != nil {
-		for _, record := range data {
-			if rec, ok := record.(map[string]interface{}); ok {
-				for key, val := range rec {
-					mineUnit(key, val.(map[string]interface{}))
-				}
-			}
-			// fmt.Println(record)
+	json, err := readData()
+	if err != nil {
+		fmt.Println("Error parsing json: ", err)
+	}
+	json.Get("#.table").ForEach(mineTable)
+	json.Get("#.chain").ForEach(mineChain)
+	json.Get("#.rule").ForEach(mineRule)
+}
+
+// Mining "table": {} metrics
+func mineTable(key gjson.Result, value gjson.Result) bool {
+	// fmt.Printf("[table] %s = %s\n", key, value)
+	tableChains.WithLabelValues(value.Get("name").String(), value.Get("family").String()).Set(0)
+	return true
+}
+
+// Mining "chain": {} metrics
+func mineChain(key gjson.Result, value gjson.Result) bool {
+	// fmt.Printf("[chain] %s = %s\n", key, value)
+	table := value.Get("table").String()
+	family := value.Get("family").String()
+	tableChains.WithLabelValues(table, family).Inc()
+	chainRules.WithLabelValues(value.Get("name").String(), family, table).Set(0)
+	return true
+}
+
+// Mining "rule": {} metrics
+func mineRule(key gjson.Result, value gjson.Result) bool {
+	// fmt.Printf("[rule] %s = %s\n", key, value)
+	rule := NewRule(value.Get("chain").String(), value.Get("family").String(), value.Get("table").String())
+	chainRules.WithLabelValues(rule.Chain, rule.Family, rule.Table).Inc()
+	counter := value.Get("expr.#.counter|0")
+	if counter.Exists() {
+		// fmt.Println(counter.Get("bytes").Float(), counter.Get("packets").Float())
+		rule.Couters.Bytes = counter.Get("bytes").Float()
+		rule.Couters.Packets = counter.Get("packets").Float()
+		comment := value.Get("comment")
+		if comment.Exists() {
+			rule.Comment = comment.String()
 		}
-	}
-}
-
-func mineUnit(key string, record map[string]interface{}) {
-	// fmt.Printf(" [========>] %s = %s\n", key, record)
-	switch key {
-	case "table":
-		mineTable(record)
-	case "chain":
-		mineChain(record)
-	case "rule":
-		mineRule(record)
-	}
-}
-
-func mineTable(record map[string]interface{}) {
-	// fmt.Printf(" [table] %s\n", record)
-	tableChains.WithLabelValues(record["name"].(string), record["family"].(string)).Set(0)
-}
-
-func mineChain(record map[string]interface{}) {
-	// fmt.Printf(" [chain] %s\n", record)
-	tableChains.WithLabelValues(record["table"].(string), record["family"].(string)).Add(1)
-	chainRules.WithLabelValues(record["name"].(string), record["family"].(string), record["table"].(string)).Set(0)
-}
-
-func mineRule(record map[string]interface{}) {
-	// fmt.Printf(" [rule] %s\n", record)
-	chainName := record["chain"].(string)
-	familyName := record["family"].(string)
-	tableName := record["table"].(string)
-	chainRules.WithLabelValues(chainName, familyName, tableName).Add(1)
-
-	var counters map[string]interface{}
-	counterType := "chain_exit"
-	var interfaceInput string
-	var interfaceOutput string
-	var addrSource string
-	var addrDestination string
-	var protocol string
-]	var portsSource string
-	var portsDestination string
-
-	for _, record := range record["expr"].([]interface{}) {
-		for exprKey, exprVal := range record.(map[string]interface{}) {
-			// log.Printf("{expr}: %+v\n", exprVal)
-
-			switch exprKey {
-			case "counter":
-				{
-					counters = exprVal.(map[string]interface{})
+		for _, match := range value.Get("expr.#.match").Array() {
+			// fmt.Printf("[match] %s\n", match)
+			left := match.Get("left")
+			right := match.Get("right")
+			if left.Exists() && right.Exists() {
+				// fmt.Printf("[left] %s, [right] %s\n", left, right)
+				meta := left.Get("meta")
+				if meta.Exists() {
+					switch meta.String() {
+					case "iif", "iifname":
+						rule.Interfaces.Input = append(rule.Interfaces.Input, right.String())
+					case "oif", "oifname":
+						rule.Interfaces.Output = append(rule.Interfaces.Output, right.String())
+					}
+					continue
 				}
-			case "accept":
-				{
-					counterType = "rule_accept"
-				}
-			case "drop":
-				{
-					counterType = "rule_drop"
-				}
-			case "match":
-				{
-					// log.Printf("{match expr}: %+v\n", exprVal)
-					for matchKey, matchVal := range exprVal.(map[string]interface{}) {
-						// log.Printf("{match %s}: %+v\n", matchKey, matchVal)
-						log.Printf("{matchval type}: %T\n", matchVal)
-						switch matchKey {
-						case "left":
-							{
-								for leftKey, leftVal := range matchVal.(map[string]interface{}) {
-									log.Printf("{left %s}: %+v\n", leftKey, leftVal)
-									switch leftKey {
-									case "payload":
-										{
-											payloadVal := leftVal.(map[string]interface{})
-											matchPayloadName = payloadVal["name"].(string)
-											matchPayloadField = payloadVal["field"].(string)
-											// for payloadKey, payloadVal := range leftVal.(map[string]interface{}) {
-
-											// }
-										}
-									case "meta":
-										{
-											switch leftVal.(string) {
-											case "oif", "oifname":
-												{
-													matchDirection = "out"
-												}
-											case "iif", "iifname":
-												{
-													matchDirection = "in"
-												}
-											}
-										}
-									}
-								}
-							}
-						case "right":
-							{
-								switch matchVal.(type) {
-								case string:
-									{
-										// log.Printf("{match right string}: %+v\n", matchVal)
-										if matchDirection != "" {
-											matchInterface = matchVal.(string)
-										}
-									}
-								case map[string]interface{}:
-									{
-
-									}
-								}
-							}
+				payload := left.Get("payload")
+				if payload.Exists() {
+					field := payload.Get("field")
+					if field.Exists() {
+						switch field.String() { // TODO: ip4 \ ip6 proto as tag?
+						case "saddr":
+							rule.Addresses.Source = append(rule.Addresses.Source, mineAddress(right)...)
+						case "daddr":
+							rule.Addresses.Destination = append(rule.Addresses.Destination, mineAddress(right)...)
+						case "sport":
+							rule.Ports.Source = append(rule.Ports.Source, minePorts(right)...)
+						case "dport":
+							rule.Ports.Destination = append(rule.Ports.Destination, minePorts(right)...)
 						}
 					}
+					continue
+				}
+			}
+		}
+		setRuleCounters(rule)
+	}
+	return true
+}
+
+func mineAddress(right gjson.Result) []string {
+	switch right.Type {
+	case gjson.String:
+		return []string{right.String()}
+	case gjson.JSON:
+		{
+			prefix := right.Get("prefix")
+			if prefix.Exists() {
+				return []string{subnetToString(prefix)}
+			}
+			set := right.Get("set")
+			if set.Exists() {
+				var addresses []string
+				// fmt.Printf("[prefix] %s\n", set.Get("#.prefix"))
+				for _, prefix := range set.Get("#.prefix").Array() {
+					// fmt.Printf("[prefix] %s\n", prefix)
+					addresses = append(addresses, subnetToString(prefix))
+				}
+				return addresses
+			}
+		}
+	}
+	return []string{}
+}
+
+func subnetToString(prefix gjson.Result) string {
+	return fmt.Sprintf("%s/%s", prefix.Get("addr").String(), prefix.Get("len").String())
+}
+
+func minePorts(right gjson.Result) []string {
+	switch right.Type {
+	case gjson.String, gjson.Number:
+		return []string{right.String()}
+	case gjson.JSON:
+		return portsToArray(right, []string{"set", "range"})
+	}
+	return []string{}
+}
+
+func portsToArray(right gjson.Result, keys []string) []string {
+	var ports []string
+	for _, key := range keys {
+		values := right.Get(key)
+		if values.Exists() {
+			// fmt.Printf("{matchval type}: %+v\n", values)
+			for _, port := range values.Array() {
+				// fmt.Printf("[ptype] %s\n", port.Type)
+				switch port.Type {
+				case gjson.String, gjson.Number:
+					ports = append(ports, port.String())
+				case gjson.JSON:
+					ports = append(ports, portsToArray(port, []string{"set", "range"})...)
 				}
 			}
 		}
 	}
+	// fmt.Printf("[ports] %s\n", ports)
+	return ports
+}
 
-	if counters != nil {
-		if record["comment"] != nil {
-			ruleComment := record["comment"].(string)
-			ruleBytes.WithLabelValues(chainName, familyName, tableName, ruleComment, counterType).Add(counters["bytes"].(float64))
-			rulePackets.WithLabelValues(chainName, familyName, tableName, ruleComment, counterType).Add(counters["packets"].(float64))
-			// ruleBytes(record["chain"].(string), record["family"].(string), record["table"].(string), record["comment"].(string)).set(record["comment"])
-		}
-	}
-
+func setRuleCounters(rule Rule) {
+	InputInterfaces := arrayToTag(rule.Interfaces.Input)
+	OutputInterfaces := arrayToTag(rule.Interfaces.Output)
+	SourceAddresses := arrayToTag(rule.Addresses.Source)
+	DestinationAddresses := arrayToTag(rule.Addresses.Destination)
+	SourcePorts := arrayToTag(rule.Ports.Source)
+	DestinationPorts := arrayToTag(rule.Ports.Destination)
+	ruleBytes.WithLabelValues(
+		rule.Chain,
+		rule.Family,
+		rule.Table,
+		InputInterfaces,
+		OutputInterfaces,
+		SourceAddresses,
+		DestinationAddresses,
+		SourcePorts,
+		DestinationPorts,
+		rule.Comment).Set(rule.Couters.Bytes)
+	rulePackets.WithLabelValues(
+		rule.Chain,
+		rule.Family,
+		rule.Table,
+		InputInterfaces,
+		OutputInterfaces,
+		SourceAddresses,
+		DestinationAddresses,
+		SourcePorts,
+		DestinationPorts,
+		rule.Comment).Set(rule.Couters.Packets)
 }
 
 var (
@@ -230,8 +301,10 @@ var (
 
 	tableChains = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "nftables_table_chains",
-			Help: "Count chains in table",
+			Namespace: "nftables",
+			Subsystem: "table",
+			Name:      "chains",
+			Help:      "Count chains in table",
 		},
 		[]string{
 			"name",
@@ -240,8 +313,10 @@ var (
 	)
 	chainRules = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
-			Name: "nftables_chain_rules",
-			Help: "Count rules in chain",
+			Namespace: "nftables",
+			Subsystem: "chain",
+			Name:      "rules",
+			Help:      "Count rules in chain",
 		},
 		[]string{
 			"name",
@@ -249,30 +324,44 @@ var (
 			"table",
 		},
 	)
-	ruleBytes = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "nftables_rule_bytes",
-			Help: "Bytes, matched by rule",
+	ruleBytes = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "nftables",
+			Subsystem: "rule",
+			Name:      "bytes",
+			Help:      "Bytes, matched by rule per rule comment",
 		},
 		[]string{
 			"chain",
 			"family",
 			"table",
+			"input_interfaces",
+			"output_interfaces",
+			"source_addresses",
+			"destination_addresses",
+			"source_ports",
+			"destination_ports",
 			"comment",
-			"type",
 		},
 	)
-	rulePackets = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "nftables_rule_packets",
-			Help: "Packets, matched by rule",
+	rulePackets = prometheus.NewGaugeVec(
+		prometheus.GaugeOpts{
+			Namespace: "nftables",
+			Subsystem: "rule",
+			Name:      "packets",
+			Help:      "Packets, matched by rule per rule comment",
 		},
 		[]string{
 			"chain",
 			"family",
 			"table",
+			"input_interfaces",
+			"output_interfaces",
+			"source_addresses",
+			"destination_addresses",
+			"source_ports",
+			"destination_ports",
 			"comment",
-			"type",
 		},
 	)
 )
@@ -280,7 +369,7 @@ var (
 func init() {
 	readOptions()
 
-	log.Printf("Starting on %s%s\n", options.NftablesExporter.BindTo, options.NftablesExporter.URLPath)
+	fmt.Printf("Starting on %s%s\n", options.NftablesExporter.BindTo, options.NftablesExporter.URLPath)
 
 	prometheus.MustRegister(tableChains)
 	prometheus.MustRegister(chainRules)
@@ -290,7 +379,7 @@ func init() {
 
 func main() {
 	evaluationIntervalSec, derr := time.ParseDuration(options.NftablesExporter.EvaluationInterval)
-	log.Printf("%+v\n", evaluationIntervalSec)
+
 	if derr != nil {
 		log.Fatalln(derr)
 	}
@@ -302,7 +391,7 @@ func main() {
 		}
 	}()
 
-	log.Println("Listen up")
+	fmt.Println("Listen up")
 	http.Handle(options.NftablesExporter.URLPath, promhttp.Handler())
 	log.Fatal(http.ListenAndServe(options.NftablesExporter.BindTo, nil))
 }

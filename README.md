@@ -24,12 +24,12 @@ nftables_chain_rules{family="inet",name="global",table="filter"} 15.0
 # TYPE nftables_table_chains gauge
 nftables_table_chains{family="inet",name="filter"} 7.0
 nftables_table_chains{family="ip",name="nat"} 4.0
-# HELP nftables_rule_bytes Bytes, matched by rule
-# TYPE nftables_rule_bytes counter
-nftables_rule_bytes{chain="forward",comment="count output accepted packets",family="inet",table="filter",type="chain_exit"} 2.388997e+06
-nftables_rule_bytes{chain="global",comment="accept all connections related to connections made by us",family="inet",table="filter",type="rule_accept"} 7.664056432e+09
-# HELP nftables_rule_packets Packets, matched by rule
-# TYPE nftables_rule_packets counter
-nftables_rule_packets{chain="forward",comment="count output accepted packets",family="inet",table="filter",type="chain_exit"} 23344.0
-nftables_rule_packets{chain="global",comment="accept all connections related to connections made by us",family="inet",table="filter",type="rule_accept"} 3.226925e+06
+# HELP nftables_rule_bytes Bytes, matched by rule per rule comment
+# TYPE nftables_rule_bytes gauge
+nftables_rule_bytes{chain="network_hosts",comment="[spc->internet] Default http [tcp]",destination_addresses="any",destination_ports="http",family="inet",input_interfaces="internal_0",output_interfaces="external_he_0",source_addresses="2001:470:70c8:1::a",source_ports="any",table="filter"} 5268.0
+nftables_rule_bytes{chain="network_hosts",comment="[spc->internet] Default http [tcp]",destination_addresses="any",destination_ports="http",family="inet",input_interfaces="internal_0",output_interfaces="external_kis_0",source_addresses="10.0.0.10",source_ports="any",table="filter"} 360.0
+# HELP nftables_rule_packets Packets, matched by rule per rule comment
+# TYPE nftables_rule_packets gauge
+nftables_rule_packets{chain="network_hosts",comment="[spc->internet] Default http [tcp]",destination_addresses="any",destination_ports="http",family="inet",input_interfaces="internal_0",output_interfaces="external_he_0",source_addresses="2001:470:70c8:1::a",source_ports="any",table="filter"} 56.0
+nftables_rule_packets{chain="network_hosts",comment="[spc->internet] Default http [tcp]",destination_addresses="any",destination_ports="http",family="inet",input_interfaces="internal_0",output_interfaces="external_kis_0",source_addresses="10.0.0.10",source_ports="any",table="filter"} 6.0
 ```
