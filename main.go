@@ -126,31 +126,103 @@ func mineRule(record map[string]interface{}) {
 	familyName := record["family"].(string)
 	tableName := record["table"].(string)
 	chainRules.WithLabelValues(chainName, familyName, tableName).Add(1)
-	if record["comment"] != nil {
-		ruleComment := record["comment"].(string)
-		var counters map[string]interface{}
-		counterType := "chain_exit"
-		for _, record := range record["expr"].([]interface{}) {
-			if rec, ok := record.(map[string]interface{}); ok {
-				for key, val := range rec {
-					// fmt.Printf(" [expr] %s, %+v\n", key, val)
-					switch key {
-					case "counter":
-						counters = val.(map[string]interface{})
-					case "accept":
-						counterType = "rule_accept"
-					case "drop":
-						counterType = "rule_drop"
+
+	var counters map[string]interface{}
+	counterType := "chain_exit"
+	var interfaceInput string
+	var interfaceOutput string
+	var addrSource string
+	var addrDestination string
+	var protocol string
+]	var portsSource string
+	var portsDestination string
+
+	for _, record := range record["expr"].([]interface{}) {
+		for exprKey, exprVal := range record.(map[string]interface{}) {
+			// log.Printf("{expr}: %+v\n", exprVal)
+
+			switch exprKey {
+			case "counter":
+				{
+					counters = exprVal.(map[string]interface{})
+				}
+			case "accept":
+				{
+					counterType = "rule_accept"
+				}
+			case "drop":
+				{
+					counterType = "rule_drop"
+				}
+			case "match":
+				{
+					// log.Printf("{match expr}: %+v\n", exprVal)
+					for matchKey, matchVal := range exprVal.(map[string]interface{}) {
+						// log.Printf("{match %s}: %+v\n", matchKey, matchVal)
+						log.Printf("{matchval type}: %T\n", matchVal)
+						switch matchKey {
+						case "left":
+							{
+								for leftKey, leftVal := range matchVal.(map[string]interface{}) {
+									log.Printf("{left %s}: %+v\n", leftKey, leftVal)
+									switch leftKey {
+									case "payload":
+										{
+											payloadVal := leftVal.(map[string]interface{})
+											matchPayloadName = payloadVal["name"].(string)
+											matchPayloadField = payloadVal["field"].(string)
+											// for payloadKey, payloadVal := range leftVal.(map[string]interface{}) {
+
+											// }
+										}
+									case "meta":
+										{
+											switch leftVal.(string) {
+											case "oif", "oifname":
+												{
+													matchDirection = "out"
+												}
+											case "iif", "iifname":
+												{
+													matchDirection = "in"
+												}
+											}
+										}
+									}
+								}
+							}
+						case "right":
+							{
+								switch matchVal.(type) {
+								case string:
+									{
+										// log.Printf("{match right string}: %+v\n", matchVal)
+										if matchDirection != "" {
+											matchInterface = matchVal.(string)
+										}
+									}
+								case map[string]interface{}:
+									{
+
+									}
+								}
+							}
+						}
 					}
 				}
 			}
 		}
-		if counters != nil {
+	}
+
+	if counters != nil {
+		if record["comment"] != nil {
+			ruleComment := record["comment"].(string)
 			ruleBytes.WithLabelValues(chainName, familyName, tableName, ruleComment, counterType).Add(counters["bytes"].(float64))
 			rulePackets.WithLabelValues(chainName, familyName, tableName, ruleComment, counterType).Add(counters["packets"].(float64))
+			// ruleBytes(record["chain"].(string), record["family"].(string), record["table"].(string), record["comment"].(string)).set(record["comment"])
 		}
-		// ruleBytes(record["chain"].(string), record["family"].(string), record["table"].(string), record["comment"].(string)).set(record["comment"])
 	}
+
 }
 
 var (
