@@ -88,6 +88,12 @@ func init() {
 	prometheus.MustRegister(rulePackets)
 }
 
+func Handler() http.Handler {
+	return promhttp.InstrumentMetricHandler(
+		prometheus.DefaultRegisterer, promhttp.HandlerFor(prometheus.DefaultGatherer, HandlerOpts{}),
+	)
+}
+
 func main() {
 	evaluationIntervalSec, derr := time.ParseDuration(options.Nft.EvaluationInterval)
 
@@ -103,6 +109,6 @@ func main() {
 	}()
 
 	logger.Info("Starting on %s%s", options.Nft.BindTo, options.Nft.URLPath)
-	http.Handle(options.Nft.URLPath, promhttp.Handler())
+	http.Handle(options.Nft.URLPath, Handler())
 	log.Fatal(http.ListenAndServe(options.Nft.BindTo, nil))
 }
