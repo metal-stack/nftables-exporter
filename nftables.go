@@ -13,6 +13,7 @@ type Rule struct {
 	Table      string
 	Family     string
 	Comment    string
+	Action     string
 	Interfaces struct {
 		Input  []string
 		Output []string
@@ -38,6 +39,7 @@ func NewRule(chain string, family string, table string) Rule {
 	rule.Family = family
 	rule.Table = table
 	rule.Comment = "empty"
+	rule.Action = "policy"
 	return rule
 }
 
@@ -87,6 +89,7 @@ func mineRule(key gjson.Result, value gjson.Result) bool {
 		rule.Couters.Bytes = counter.Get("bytes").Float()
 		rule.Couters.Packets = counter.Get("packets").Float()
 		comment := value.Get("comment")
+		rule.Action = mineAction(value.Get("expr"))
 		if comment.Exists() {
 			rule.Comment = comment.String()
 		}
@@ -128,6 +131,19 @@ func mineRule(key gjson.Result, value gjson.Result) bool {
 		setRuleCounters(rule)
 	}
 	return true
+}
+
+func mineAction(expr gjson.Result) string {
+	// logger.Info("%+v", value.Get("expr.#.(drop|accept|masquerade)"))
+	for _, action := range []string{"drop", "accept", "masquerade"} {
+		// logger.Info("%+v", expr.Get(fmt.Sprintf("#.%s", action)))
+		jAction := expr.Get(fmt.Sprintf("#.%s|0", action))
+		if jAction.Exists() {
+			// logger.Info("%+v, %s", jAction, action)
+			return action
+		}
+	}
+	return "policy"
 }
 
 func mineAddress(right gjson.Result) []string {
@@ -207,7 +223,8 @@ func setRuleCounters(rule Rule) {
 		DestinationAddresses,
 		SourcePorts,
 		DestinationPorts,
-		rule.Comment).Set(rule.Couters.Bytes)
+		rule.Comment,
+		rule.Action).Set(rule.Couters.Bytes)
 	rulePackets.WithLabelValues(
 		rule.Chain,
 		rule.Family,
@@ -218,5 +235,6 @@ func setRuleCounters(rule Rule) {
 		DestinationAddresses,
 		SourcePorts,
 		DestinationPorts,
-		rule.Comment).Set(rule.Couters.Packets)
+		rule.Comment,
+		rule.Action).Set(rule.Couters.Packets)
 }

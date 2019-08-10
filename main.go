@@ -56,6 +56,7 @@ var (
 			"source_ports",
 			"destination_ports",
 			"comment",
+			"action",
 		},
 	)
 	rulePackets = prometheus.NewGaugeVec(
@@ -76,6 +77,7 @@ var (
 			"source_ports",
 			"destination_ports",
 			"comment",
+			"action",
 		},
 	)
 )
@@ -86,12 +88,6 @@ func init() {
 	prometheus.MustRegister(chainRules)
 	prometheus.MustRegister(ruleBytes)
 	prometheus.MustRegister(rulePackets)
-}
-
-func Handler() http.Handler {
-	return promhttp.InstrumentMetricHandler(
-		prometheus.DefaultRegisterer, promhttp.HandlerFor(prometheus.DefaultGatherer, HandlerOpts{}),
-	)
 }
 
 func main() {
@@ -109,6 +105,6 @@ func main() {
 	}()
 
 	logger.Info("Starting on %s%s", options.Nft.BindTo, options.Nft.URLPath)
-	http.Handle(options.Nft.URLPath, Handler())
+	http.Handle(options.Nft.URLPath, promhttp.Handler())
 	log.Fatal(http.ListenAndServe(options.Nft.BindTo, nil))
 }
