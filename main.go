@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -15,18 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/tidwall/gjson"
-	"gopkg.in/yaml.v2"
 )
-
-// Options is a representation of a options
-type Options struct {
-	NftablesExporter struct {
-		BindTo             string `yaml:"bind_to"`
-		URLPath            string `yaml:"url_path"`
-		EvaluationInterval string `yaml:"evaluation_interval"`
-		FakeNftJSON        string `yaml:"fake_nft_json"`
-	} `yaml:"nftables_exporter"`
-}
 
 // Rule - chain rule
 type Rule struct {
@@ -69,24 +57,6 @@ func arrayToTag(values []string) string {
 	return strings.Join(values, ",")
 }
 
-// Parse options from yaml config file
-func readOptions() {
-	configFile := flag.String("config", "/etc/nftables_exporter.yaml", "Path to nftables_exporter config file")
-	flag.Parse()
-
-	fmt.Printf("Read options from %s\n", *configFile)
-	yamlFile, err := ioutil.ReadFile(*configFile)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	err = yaml.Unmarshal(yamlFile, &options)
-	// fmt.Println(options)
-	if err != nil {
-		log.Fatalln(err)
-	}
-}
-
 // Parse json to gjson object
 func parseJSON(data string) (gjson.Result, error) {
 	if !gjson.Valid(data) {
@@ -97,18 +67,18 @@ func parseJSON(data string) (gjson.Result, error) {
 
 // Reading fake nftables json
 func readFakeNFTables() (gjson.Result, error) {
-	fmt.Printf("Read nft json from %s\n", options.NftablesExporter.FakeNftJSON)
-	jsonFile, err := ioutil.ReadFile(options.NftablesExporter.FakeNftJSON)
+	logger.Verbose("Read fake nftables data from json: %s", options.Nft.FakeNftJSON)
+	jsonFile, err := ioutil.ReadFile(options.Nft.FakeNftJSON)
 	if err != nil {
-		log.Fatal("Fake NFTables reading error: ", err)
+		logger.Error("Fake nftables data reading error: %s", err)
 	}
 	return parseJSON(string(jsonFile))
 }
 
 // Get json from nftables and parse it
 func readNFTables() (gjson.Result, error) {
-	// fmt.Println("Reading NFTables")
-	out, err := exec.Command("/sbin/nft", "-j", "list", "ruleset").Output()
+	logger.Debug("Collecting NFTables counters...")
+	out, err := exec.Command(options.Nft.NFTLocation, "-j", "list", "ruleset").Output()
 	if err != nil {
 		log.Fatal("NFTables reading error: ", err)
 	}
@@ -117,7 +87,7 @@ func readNFTables() (gjson.Result, error) {
 
 // Select json source and parse
 func readData() (gjson.Result, error) {
-	if _, err := os.Stat(options.NftablesExporter.FakeNftJSON); err == nil {
+	if _, err := os.Stat(options.Nft.FakeNftJSON); err == nil {
 		return readFakeNFTables()
 	}
 	return readNFTables()
@@ -127,7 +97,7 @@ func readData() (gjson.Result, error) {
 func recordMetrics() {
 	json, err := readData()
 	if err != nil {
-		fmt.Println("Error parsing json: ", err)
+		logger.Error("Failed parsing nftables data: %s", err)
 	}
 	json.Get("#.table").ForEach(mineTable)
 	json.Get("#.chain").ForEach(mineChain)
@@ -298,6 +268,7 @@ func setRuleCounters(rule Rule) {
 
 var (
 	options Options
+	logger  Logger
 
 	tableChains = prometheus.NewGaugeVec(
 		prometheus.GaugeOpts{
@@ -367,10 +338,7 @@ var (
 )
 
 func init() {
-	readOptions()
-
-	fmt.Printf("Starting on %s%s\n", options.NftablesExporter.BindTo, options.NftablesExporter.URLPath)
-
+	options = loadOptions()
 	prometheus.MustRegister(tableChains)
 	prometheus.MustRegister(chainRules)
 	prometheus.MustRegister(ruleBytes)
@@ -378,7 +346,7 @@ func init() {
 }
 
 func main() {
-	evaluationIntervalSec, derr := time.ParseDuration(options.NftablesExporter.EvaluationInterval)
+	evaluationIntervalSec, derr := time.ParseDuration(options.Nft.EvaluationInterval)
 
 	if derr != nil {
 		log.Fatalln(derr)
@@ -391,7 +359,7 @@ func main() {
 		}
 	}()
 
-	fmt.Println("Listen up")
-	http.Handle(options.NftablesExporter.URLPath, promhttp.Handler())
-	log.Fatal(http.ListenAndServe(options.NftablesExporter.BindTo, nil))
+	logger.Info("Starting on %s%s", options.Nft.BindTo, options.Nft.URLPath)
+	http.Handle(options.Nft.URLPath, promhttp.Handler())
+	log.Fatal(http.ListenAndServe(options.Nft.BindTo, nil))
 }

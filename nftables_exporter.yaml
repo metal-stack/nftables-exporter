@@ -3,3 +3,4 @@ nftables_exporter:
   url_path: "/metrics"
   evaluation_interval: 10s
   fake_nft_json: nft.json
+  nft_location: /sbin/nft
