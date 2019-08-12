@@ -9,111 +9,101 @@ import (
 )
 
 var (
-	options Options
-	logger  Logger
-
-	tableChains = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "nftables",
-			Subsystem: "table",
-			Name:      "chains",
-			Help:      "Count chains in table",
-		},
-		[]string{
-			"name",
-			"family",
-		},
-	)
-	chainRules = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "nftables",
-			Subsystem: "chain",
-			Name:      "rules",
-			Help:      "Count rules in chain",
-		},
-		[]string{
-			"name",
-			"family",
-			"table",
-		},
-	)
-	ruleBytes = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "nftables",
-			Subsystem: "rule",
-			Name:      "bytes",
-			Help:      "Bytes, matched by rule per rule comment",
-		},
-		[]string{
-			"chain",
-			"family",
-			"table",
-			"input_interfaces",
-			"output_interfaces",
-			"source_addresses",
-			"destination_addresses",
-			"source_ports",
-			"destination_ports",
-			"comment",
-			"action",
-		},
-	)
-	rulePackets = prometheus.NewGaugeVec(
-		prometheus.GaugeOpts{
-			Namespace: "nftables",
-			Subsystem: "rule",
-			Name:      "packets",
-			Help:      "Packets, matched by rule per rule comment",
-		},
-		[]string{
-			"chain",
-			"family",
-			"table",
-			"input_interfaces",
-			"output_interfaces",
-			"source_addresses",
-			"destination_addresses",
-			"source_ports",
-			"destination_ports",
-			"comment",
-			"action",
-		},
-	)
+	options         Options
+	logger          Logger
 	promhttpHandler = promhttp.Handler()
+
+	tableChainsDesc = prometheus.NewDesc(
+		"nftables_table_chains",
+		"Count chains in table",
+		[]string{
+			"name",
+			"family",
+		},
+		nil,
+	)
+	chainRulesDesc = prometheus.NewDesc(
+		"nftables_chain_rules",
+		"Count rules in chain",
+		[]string{
+			"name",
+			"family",
+			"table",
+		},
+		nil,
+	)
+	ruleBytesDesc = prometheus.NewDesc(
+		"nftables_rule_bytes",
+		"Bytes, matched by rule per rule comment",
+		[]string{
+			"chain",
+			"family",
+			"table",
+			"input_interfaces",
+			"output_interfaces",
+			"source_addresses",
+			"destination_addresses",
+			"source_ports",
+			"destination_ports",
+			"comment",
+			"action",
+		},
+		nil,
+	)
+	rulePacketsDesc = prometheus.NewDesc(
+		"nftables_rule_packets",
+		"Packets, matched by rule per rule comment",
+		[]string{
+			"chain",
+			"family",
+			"table",
+			"input_interfaces",
+			"output_interfaces",
+			"source_addresses",
+			"destination_addresses",
+			"source_ports",
+			"destination_ports",
+			"comment",
+			"action",
+		},
+		nil,
+	)
 )
 
-// PreparePromHandler helper for call metrics collect on request
-type PreparePromHandler struct {
-	RecordMetrics func()
-	Handler       http.Handler
+// NFTablesManagerCollector implements the Collector interface.
+type NFTablesManagerCollector struct {
 }
 
-func (p *PreparePromHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	p.RecordMetrics()
-	p.Handler.ServeHTTP(w, r)
+// Describe sends the super-set of all possible descriptors of metrics
+func (i NFTablesManagerCollector) Describe(ch chan<- *prometheus.Desc) {
+	prometheus.DescribeByCollect(i, ch)
 }
 
-func recordMetrics() {
+// Collect is called by the Prometheus registry when collecting metrics.
+func (i NFTablesManagerCollector) Collect(ch chan<- prometheus.Metric) {
 	json, err := readData()
 	if err != nil {
 		logger.Error("Failed parsing nftables data: %s", err)
 	} else {
-		json.Get("#.table").ForEach(mineTable)
-		json.Get("#.chain").ForEach(mineChain)
-		json.Get("#.rule").ForEach(mineRule)
+		nft := NewNFTables(json, ch)
+		nft.Collect()
 	}
 }
 
 func init() {
 	options = loadOptions()
-	prometheus.MustRegister(tableChains)
-	prometheus.MustRegister(chainRules)
-	prometheus.MustRegister(ruleBytes)
-	prometheus.MustRegister(rulePackets)
 }
 
 func main() {
+	reg := prometheus.NewPedanticRegistry()
+	reg.MustRegister(
+		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
+		prometheus.NewGoCollector(),
+	)
+
+	prometheus.WrapRegistererWithPrefix("", reg).MustRegister(NFTablesManagerCollector{})
+
 	logger.Info("Starting on %s%s", options.Nft.BindTo, options.Nft.URLPath)
-	http.Handle(options.Nft.URLPath, &PreparePromHandler{recordMetrics, promhttp.Handler()})
+	http.Handle(options.Nft.URLPath, promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	log.Fatal(http.ListenAndServe(options.Nft.BindTo, nil))
 }
