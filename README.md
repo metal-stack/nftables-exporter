@@ -4,8 +4,12 @@ Export nftables statistics to prometheus
 Work in progress, metric names and tags can be changed!
 
 # Configuration
-By default nftables_exporter read file /etc/nftables_exporter.yaml, but you can use parametr `--config=/path/to/file.yaml`
+## Command line options
+* `--config=/path/to/file.yaml`: Path to configuration file, defaulr `/etc/nftables_exporter.yaml`
+* `--verbose`: verbosed log, default no
+* `--debug`: Debug logging, default no
 
+## Configuration file
 Example content:
 ```
 nftables_exporter:

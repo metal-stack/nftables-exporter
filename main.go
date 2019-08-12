@@ -97,10 +97,11 @@ func recordMetrics() {
 	json, err := readData()
 	if err != nil {
 		logger.Error("Failed parsing nftables data: %s", err)
+	} else {
+		json.Get("#.table").ForEach(mineTable)
+		json.Get("#.chain").ForEach(mineChain)
+		json.Get("#.rule").ForEach(mineRule)
 	}
-	json.Get("#.table").ForEach(mineTable)
-	json.Get("#.chain").ForEach(mineChain)
-	json.Get("#.rule").ForEach(mineRule)
 }
 
 func init() {
