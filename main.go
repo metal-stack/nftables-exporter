@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -80,7 +79,29 @@ var (
 			"action",
 		},
 	)
+	promhttpHandler = promhttp.Handler()
 )
+
+// PreparePromHandler helper for call metrics collect on request
+type PreparePromHandler struct {
+	RecordMetrics func()
+	Handler       http.Handler
+}
+
+func (p *PreparePromHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	p.RecordMetrics()
+	p.Handler.ServeHTTP(w, r)
+}
+
+func recordMetrics() {
+	json, err := readData()
+	if err != nil {
+		logger.Error("Failed parsing nftables data: %s", err)
+	}
+	json.Get("#.table").ForEach(mineTable)
+	json.Get("#.chain").ForEach(mineChain)
+	json.Get("#.rule").ForEach(mineRule)
+}
 
 func init() {
 	options = loadOptions()
@@ -91,20 +112,7 @@ func init() {
 }
 
 func main() {
-	evaluationIntervalSec, derr := time.ParseDuration(options.Nft.EvaluationInterval)
-
-	if derr != nil {
-		log.Fatalln(derr)
-	}
-
-	go func() {
-		for {
-			recordMetrics()
-			time.Sleep(time.Duration(evaluationIntervalSec.Seconds()) * time.Second)
-		}
-	}()
-
 	logger.Info("Starting on %s%s", options.Nft.BindTo, options.Nft.URLPath)
-	http.Handle(options.Nft.URLPath, promhttp.Handler())
+	http.Handle(options.Nft.URLPath, &PreparePromHandler{recordMetrics, promhttp.Handler()})
 	log.Fatal(http.ListenAndServe(options.Nft.BindTo, nil))
 }

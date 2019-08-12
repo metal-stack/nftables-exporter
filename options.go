@@ -7,13 +7,12 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
-// Options is a inner representation of a options
+// NFTOptions is a inner representation of a options
 type NFTOptions struct {
-	BindTo             string `yaml:"bind_to"`
-	URLPath            string `yaml:"url_path"`
-	EvaluationInterval string `yaml:"evaluation_interval"`
-	FakeNftJSON        string `yaml:"fake_nft_json"`
-	NFTLocation        string `yaml:"nft_location"`
+	BindTo      string `yaml:"bind_to"`
+	URLPath     string `yaml:"url_path"`
+	FakeNftJSON string `yaml:"fake_nft_json"`
+	NFTLocation string `yaml:"nft_location"`
 }
 
 // Options is a representation of a options
@@ -38,11 +37,10 @@ func loadOptions() Options {
 
 	opts := Options{
 		NFTOptions{
-			BindTo:             "9105",
-			URLPath:            "/metrics",
-			EvaluationInterval: "10s",
-			FakeNftJSON:        "",
-			NFTLocation:        "/sbin/nft",
+			BindTo:      "9105",
+			URLPath:     "/metrics",
+			FakeNftJSON: "",
+			NFTLocation: "/sbin/nft",
 		},
 	}
 

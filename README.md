@@ -9,10 +9,12 @@ By default nftables_exporter read file /etc/nftables_exporter.yaml, but you can 
 Example content:
 ```
 nftables_exporter:
-  bind_to: ":9105"
+  bind_to: "[::1]:9105"
   url_path: "/metrics"
-  evaluation_interval: 10s
+  nft_location: /sbin/nft
+  fake_nft_json: /path/to/nft.json
 ```
+`fake_nft_json` used for debugging. I create this file with the command `nft -j list ruleset > /path/to/nft.json`. For normal exporter usage, this option is not needed.
 
 # Examle metrics
 ```
@@ -26,10 +28,11 @@ nftables_table_chains{family="inet",name="filter"} 7.0
 nftables_table_chains{family="ip",name="nat"} 4.0
 # HELP nftables_rule_bytes Bytes, matched by rule per rule comment
 # TYPE nftables_rule_bytes gauge
-nftables_rule_bytes{chain="network_hosts",comment="[spc->internet] Default http [tcp]",destination_addresses="any",destination_ports="http",family="inet",input_interfaces="internal_0",output_interfaces="external_he_0",source_addresses="2001:470:70c8:1::a",source_ports="any",table="filter"} 5268.0
-nftables_rule_bytes{chain="network_hosts",comment="[spc->internet] Default http [tcp]",destination_addresses="any",destination_ports="http",family="inet",input_interfaces="internal_0",output_interfaces="external_kis_0",source_addresses="10.0.0.10",source_ports="any",table="filter"} 360.0
+nftables_rule_bytes{action="accept",chain="host_spc",comment="[spc->internet] Default http [tcp]",destination_addresses="any",destination_ports="http",family="inet",input_interfaces="internal_0",output_interfaces="external_kis_0",source_addresses="10.0.0.10",source_ports="any",table="filter"} 2280.0
 # HELP nftables_rule_packets Packets, matched by rule per rule comment
 # TYPE nftables_rule_packets gauge
-nftables_rule_packets{chain="network_hosts",comment="[spc->internet] Default http [tcp]",destination_addresses="any",destination_ports="http",family="inet",input_interfaces="internal_0",output_interfaces="external_he_0",source_addresses="2001:470:70c8:1::a",source_ports="any",table="filter"} 56.0
-nftables_rule_packets{chain="network_hosts",comment="[spc->internet] Default http [tcp]",destination_addresses="any",destination_ports="http",family="inet",input_interfaces="internal_0",output_interfaces="external_kis_0",source_addresses="10.0.0.10",source_ports="any",table="filter"} 6.0
+nftables_rule_packets{action="accept",chain="host_spc",comment="[spc->internet] Default http [tcp]",destination_addresses="any",destination_ports="http",family="inet",input_interfaces="internal_0",output_interfaces="external_kis_0",source_addresses="10.0.0.10",source_ports="any",table="filter"} 38.0
 ```
+
+# Thank to
+* @onokonem

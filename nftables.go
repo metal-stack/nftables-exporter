@@ -43,17 +43,6 @@ func NewRule(chain string, family string, table string) Rule {
 	return rule
 }
 
-// Worker
-func recordMetrics() {
-	json, err := readData()
-	if err != nil {
-		logger.Error("Failed parsing nftables data: %s", err)
-	}
-	json.Get("#.table").ForEach(mineTable)
-	json.Get("#.chain").ForEach(mineChain)
-	json.Get("#.rule").ForEach(mineRule)
-}
-
 func arrayToTag(values []string) string {
 	if len(values) == 0 {
 		return "any"
