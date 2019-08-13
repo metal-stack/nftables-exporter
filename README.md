@@ -10,6 +10,7 @@ Export nftables statistics to prometheus
 * `--config=/path/to/file.yaml`: Path to configuration file, defaulr `/etc/nftables_exporter.yaml`
 * `--verbose`: verbosed log, default no
 * `--debug`: Debug logging, default no
+* `--version`: Show version and exit
 
 ## Configuration file
 Example content:

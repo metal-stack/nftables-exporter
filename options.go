@@ -2,9 +2,15 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io/ioutil"
+	"os"
 
 	yaml "gopkg.in/yaml.v2"
+)
+
+var (
+	exporterVersion = "0.5"
 )
 
 // NFTOptions is a inner representation of a options
@@ -25,7 +31,13 @@ func loadOptions() Options {
 	configFile := flag.String("config", "/etc/nftables_exporter.yaml", "Path to nftables_exporter config file")
 	verbose := flag.Bool("verbose", false, "Verbose log output")
 	debug := flag.Bool("debug", false, "Debug log output")
+	version := flag.Bool("version", false, "Show application version and exit")
 	flag.Parse()
+
+	if *version {
+		fmt.Printf("nftables_exporter version: %s\n", exporterVersion)
+		os.Exit(0)
+	}
 
 	logger = newLogger(*verbose, *debug)
 
