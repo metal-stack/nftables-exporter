@@ -32,52 +32,46 @@ func (nft NFTables) arrayToTag(values []string) string {
 
 // Collect metrics
 func (nft NFTables) Collect() {
-	nft.json.Get("#.table").ForEach(nft.mineTable)
-	nft.json.Get("#.chain").ForEach(nft.mineChain)
-	nft.json.Get("#.rule").ForEach(nft.mineRule)
-}
-
-// Mining "table": {} metrics
-func (nft NFTables) mineTable(key gjson.Result, value gjson.Result) bool {
-	// fmt.Printf("[table] %s = %s\n", key, value)
-	table := value.Get("name").String()
-	family := value.Get("family").String()
-	queryTable := fmt.Sprintf("#(table==\"%s\")#", table)
-	queryFamily := fmt.Sprintf("#(family==\"%s\")#", family)
-	logger.Verbose("{%s - %s}", table, family)
-	nft.ch <- prometheus.MustNewConstMetric(
-		tableChainsDesc,
-		prometheus.GaugeValue,
-		nft.json.Get("#.chain").Get(queryTable).Get(queryFamily).Get("#").Float(),
-		table,
-		family,
-	)
-	return true
-}
-
-// Mining "chain": {} metrics
-func (nft NFTables) mineChain(key gjson.Result, value gjson.Result) bool {
-	// fmt.Printf("[chain] %s = %s\n", key, value)
-	table := value.Get("table").String()
-	family := value.Get("family").String()
-	chain := value.Get("name").String()
-	queryTable := fmt.Sprintf("#(table==\"%s\")#", table)
-	queryFamily := fmt.Sprintf("#(family==\"%s\")#", family)
-	queryChain := fmt.Sprintf("#(chain==\"%s\")#", chain)
-	logger.Verbose("{%s - %s - %s}", table, family, chain)
-	nft.ch <- prometheus.MustNewConstMetric(
-		chainRulesDesc,
-		prometheus.GaugeValue,
-		nft.json.Get("#.rule").Get(queryTable).Get(queryFamily).Get(queryChain).Get("#").Float(),
-		chain,
-		family,
-		table,
-	)
-	return true
+	tables := nft.json.Get("#.table").Array()
+	chains := nft.json.Get("#.chain").Array()
+	rules := nft.json.Get("#.rule").Array()
+	for _, jTable := range tables {
+		table := jTable.Get("name").String()
+		family := jTable.Get("family").String()
+		tableChains := 0
+		for _, jChain := range chains {
+			if jChain.Get("table").String() == table && jChain.Get("family").String() == family {
+				tableChains++
+				chain := jChain.Get("name").String()
+				chainRules := 0
+				for _, jRule := range rules {
+					if jRule.Get("table").String() == table && jRule.Get("family").String() == family && jRule.Get("chain").String() == chain {
+						chainRules++
+						nft.mineRule(jRule)
+					}
+				}
+				nft.ch <- prometheus.MustNewConstMetric(
+					chainRulesDesc,
+					prometheus.GaugeValue,
+					float64(chainRules),
+					chain,
+					family,
+					table,
+				)
+			}
+		}
+		nft.ch <- prometheus.MustNewConstMetric(
+			tableChainsDesc,
+			prometheus.GaugeValue,
+			float64(tableChains),
+			table,
+			family,
+		)
+	}
 }
 
 // Mining "rule": {} metrics
-func (nft NFTables) mineRule(key gjson.Result, value gjson.Result) bool {
+func (nft NFTables) mineRule(value gjson.Result) {
 	// fmt.Printf("[rule] %s = %s\n", key, value)
 	rule := NewRule(value.Get("chain").String(), value.Get("family").String(), value.Get("table").String())
 	counter := value.Get("expr.#.counter|0")
@@ -127,7 +121,6 @@ func (nft NFTables) mineRule(key gjson.Result, value gjson.Result) bool {
 		}
 		nft.setRuleCounters(rule)
 	}
-	return true
 }
 
 func (nft NFTables) mineAction(expr gjson.Result) string {
