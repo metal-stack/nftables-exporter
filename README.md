@@ -22,7 +22,7 @@ nftables_exporter:
 ```
 `fake_nft_json` used for debugging. I create this file with the command `nft -j list ruleset > /path/to/nft.json`. For normal exporter usage, this option is not needed.
 
-# Examle metrics
+# Example metrics
 ```
 # HELP nftables_chain_rules Count rules in chain
 # TYPE nftables_chain_rules gauge
