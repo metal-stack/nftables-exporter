@@ -1,7 +1,9 @@
 # nftables_exporter
 Export nftables statistics to prometheus
 
-Work in progress, metric names and tags can be changed!
+## Need more?
+**If you need additional metrics - contact me :)**
+**Create a feature request, describe the metric that you would like to have and attach exported from nftables json file**
 
 # Configuration
 ## Command line options
