@@ -16,7 +16,7 @@ Export nftables statistics to prometheus
 Example content:
 ```
 nftables_exporter:
-  bind_to: "[::1]:9105"
+  bind_to: "[::1]:9630"
   url_path: "/metrics"
   nft_location: /sbin/nft
   fake_nft_json: /path/to/nft.json
