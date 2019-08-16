@@ -1,5 +1,9 @@
-# nftables_exporter
+[![CircleCI](https://circleci.com/gh/Sheridan/nftables_exporter.svg?style=svg)](https://circleci.com/gh/Sheridan/nftables_exporter)
+
+# nftables_exporter 
 Export nftables statistics to prometheus
+
+
 
 ## Need more?
 **If you need additional metrics - contact me :)**
