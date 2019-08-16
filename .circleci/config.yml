@@ -12,3 +12,6 @@ jobs:
       - run:
           name: build
           command: make build
+      - store_artifacts:
+          path: bin/nftables_exporter
+          destination: nftables_exporter
