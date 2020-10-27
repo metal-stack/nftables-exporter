@@ -92,7 +92,7 @@ func (nft NFTables) mineRule(value gjson.Result) {
 				// fmt.Printf("[left] %s, [right] %s\n", left, right)
 				meta := left.Get("meta")
 				if meta.Exists() {
-					switch meta.String() {
+					switch meta.Get("key").String() {
 					case "iif", "iifname":
 						rule.Interfaces.Input = append(rule.Interfaces.Input, right.String())
 					case "oif", "oifname":
@@ -203,6 +203,7 @@ func (nft NFTables) setRuleCounters(rule Rule) {
 	DestinationAddresses := nft.arrayToTag(rule.Addresses.Destination)
 	SourcePorts := nft.arrayToTag(rule.Ports.Source)
 	DestinationPorts := nft.arrayToTag(rule.Ports.Destination)
+	// logger.Verbose(fmt.Sprintf("%s.%s.%s => %s:%s:%s -> %s:%s:%s = %f, %s, %s", rule.Chain, rule.Family, rule.Table, InputInterfaces, SourceAddresses, SourcePorts, OutputInterfaces, DestinationAddresses, DestinationPorts, rule.Couters.Bytes, rule.Action, rule.Comment))
 	nft.ch <- prometheus.MustNewConstMetric(
 		ruleBytesDesc,
 		prometheus.CounterValue,
