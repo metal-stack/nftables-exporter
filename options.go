@@ -2,52 +2,45 @@ package main
 
 import (
 	"flag"
-	"fmt"
+	"log"
 	"os"
 
+	"github.com/metal-stack/v"
 	"gopkg.in/yaml.v2"
 )
 
-var (
-	exporterVersion = "0.5"
-)
-
-// NFTOptions is a inner representation of a options
-type NFTOptions struct {
+// nftOptions is a inner representation of a options
+type nftOptions struct {
 	BindTo      string `yaml:"bind_to"`
 	URLPath     string `yaml:"url_path"`
 	FakeNftJSON string `yaml:"fake_nft_json"`
 	NFTLocation string `yaml:"nft_location"`
 }
 
-// Options is a representation of a options
-type Options struct {
-	Nft NFTOptions `yaml:"nftables_exporter"`
+// options is a representation of a options
+type options struct {
+	Nft nftOptions `yaml:"nftables_exporter"`
 }
 
 // Parse options from yaml config file
-func loadOptions() Options {
-	configFile := flag.String("config", "/etc/nftables_exporter.yaml", "Path to nftables_exporter config file")
-	verbose := flag.Bool("verbose", false, "Verbose log output")
-	debug := flag.Bool("debug", false, "Debug log output")
-	version := flag.Bool("version", false, "Show application version and exit")
+func loadOptions() options {
+	configFile := flag.String("config", "/etc/nftables_exporter.yaml", "path to nftables_exporter config file")
+	version := flag.Bool("version", false, "show application version and exit")
 	flag.Parse()
 
 	if *version {
-		fmt.Printf("nftables_exporter version: %s\n", exporterVersion)
+		log.Printf("nftables_exporter version: %s", v.V)
 		os.Exit(0)
 	}
 
-	logger = newLogger(*verbose, *debug)
-
-	logger.Verbose("Read options from %s\n", *configFile)
+	log.Printf("read options from %s\n", *configFile)
 	yamlFile, err := os.ReadFile(*configFile)
 	if err != nil {
-		logger.Panic("Failed read %s: %s", configFile, err)
+		log.Fatalf("failed read %s: %s", *configFile, err)
 	}
 
-	opts := Options{
-		NFTOptions{
+	opts := options{
+		nftOptions{
 			BindTo:      "9630",
 			URLPath:     "/metrics",
 			FakeNftJSON: "",
@@ -56,8 +49,8 @@ func loadOptions() Options {
 	}
 
 	if yaml.Unmarshal(yamlFile, &opts) != nil {
-		logger.Panic("Failed parse %s: %s", configFile, err)
+		log.Fatalf("failed parse %s: %s", *configFile, err)
 	}
-	logger.Debug("Parsed options: %s", opts)
+	log.Printf("parsed options: %#v", opts)
 	return opts
 }

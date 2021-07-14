@@ -19,28 +19,28 @@ func parseJSON(data string) (gjson.Result, error) {
 
 // Reading fake nftables json
 func readFakeNFTables() (gjson.Result, error) {
-	logger.Verbose("Read fake nftables data from json: %s", options.Nft.FakeNftJSON)
-	jsonFile, err := os.ReadFile(options.Nft.FakeNftJSON)
+	log.Printf("read fake nftables data from json: %s", opts.Nft.FakeNftJSON)
+	jsonFile, err := os.ReadFile(opts.Nft.FakeNftJSON)
 	if err != nil {
-		logger.Error("Fake nftables data reading error: %s", err)
+		log.Printf("fake nftables data reading error: %s", err)
 	}
 	return parseJSON(string(jsonFile))
 }
 
 // Get json from nftables and parse it
 func readNFTables() (gjson.Result, error) {
-	logger.Debug("Collecting NFTables counters...")
-	nft := options.Nft.NFTLocation
+	log.Print("collecting nftables counters...")
+	nft := opts.Nft.NFTLocation
 	out, err := exec.Command(nft, "-j", "list", "ruleset").Output()
 	if err != nil {
-		log.Fatal("NFTables reading error: ", err)
+		log.Fatalf("nftables reading error: %s", err)
 	}
 	return parseJSON(string(out))
 }
 
 // Select json source and parse
 func readData() (gjson.Result, error) {
-	if _, err := os.Stat(options.Nft.FakeNftJSON); err == nil {
+	if _, err := os.Stat(opts.Nft.FakeNftJSON); err == nil {
 		return readFakeNFTables()
 	}
 	return readNFTables()

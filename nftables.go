@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -16,7 +17,7 @@ type NFTables struct {
 
 // NewNFTables is NFTables constructor
 func NewNFTables(json gjson.Result, ch chan<- prometheus.Metric) NFTables {
-	logger.Verbose("Collecting metrics")
+	log.Print("collecting metrics")
 	nft := NFTables{}
 	nft.ch = ch
 	nft.json = json

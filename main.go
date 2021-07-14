@@ -10,8 +10,7 @@ import (
 )
 
 var (
-	options Options
-	logger  Logger
+	opts options
 
 	tableChainsDesc = prometheus.NewDesc(
 		"nftables_table_chains",
@@ -83,7 +82,7 @@ func (i nftablesManagerCollector) Describe(ch chan<- *prometheus.Desc) {
 func (i nftablesManagerCollector) Collect(ch chan<- prometheus.Metric) {
 	json, err := readData()
 	if err != nil {
-		logger.Error("Failed parsing nftables data: %s", err)
+		log.Printf("failed parsing nftables data: %s", err)
 	} else {
 		nft := NewNFTables(json, ch)
 		nft.Collect()
@@ -91,7 +90,7 @@ func (i nftablesManagerCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func init() {
-	options = loadOptions()
+	opts = loadOptions()
 }
 
 func main() {
@@ -103,7 +102,7 @@ func main() {
 
 	prometheus.WrapRegistererWithPrefix("", reg).MustRegister(nftablesManagerCollector{})
 
-	logger.Info("Starting on %s%s", options.Nft.BindTo, options.Nft.URLPath)
-	http.Handle(options.Nft.URLPath, promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	log.Fatal(http.ListenAndServe(options.Nft.BindTo, nil))
+	log.Printf("starting on %s%s", opts.Nft.BindTo, opts.Nft.URLPath)
+	http.Handle(opts.Nft.URLPath, promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
+	log.Fatal(http.ListenAndServe(opts.Nft.BindTo, nil))
 }
