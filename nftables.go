@@ -74,16 +74,16 @@ func (nft NFTables) Collect() {
 // Mining "rule": {} metrics
 func (nft NFTables) mineRule(value gjson.Result) {
 	// fmt.Printf("[rule] %s = %s\n", key, value)
-	rule := NewRule(value.Get("chain").String(), value.Get("family").String(), value.Get("table").String())
+	r := newNFTablesRule(value.Get("chain").String(), value.Get("family").String(), value.Get("table").String())
 	counter := value.Get("expr.#.counter|0")
 	if counter.Exists() {
 		// fmt.Println(counter.Get("bytes").Float(), counter.Get("packets").Float())
-		rule.Couters.Bytes = counter.Get("bytes").Float()
-		rule.Couters.Packets = counter.Get("packets").Float()
+		r.Couters.Bytes = counter.Get("bytes").Float()
+		r.Couters.Packets = counter.Get("packets").Float()
 		comment := value.Get("comment")
-		rule.Action = nft.mineAction(value.Get("expr"))
+		r.Action = nft.mineAction(value.Get("expr"))
 		if comment.Exists() {
-			rule.Comment = comment.String()
+			r.Comment = comment.String()
 		}
 		for _, match := range value.Get("expr.#.match").Array() {
 			// fmt.Printf("[match] %s\n", match)
@@ -95,9 +95,9 @@ func (nft NFTables) mineRule(value gjson.Result) {
 				if meta.Exists() {
 					switch meta.Get("key").String() {
 					case "iif", "iifname":
-						rule.Interfaces.Input = append(rule.Interfaces.Input, right.String())
+						r.Interfaces.Input = append(r.Interfaces.Input, right.String())
 					case "oif", "oifname":
-						rule.Interfaces.Output = append(rule.Interfaces.Output, right.String())
+						r.Interfaces.Output = append(r.Interfaces.Output, right.String())
 					}
 					continue
 				}
@@ -107,20 +107,20 @@ func (nft NFTables) mineRule(value gjson.Result) {
 					if field.Exists() {
 						switch field.String() { // TODO: ip4 \ ip6 proto as tag?
 						case "saddr":
-							rule.Addresses.Source = append(rule.Addresses.Source, nft.mineAddress(right)...)
+							r.Addresses.Source = append(r.Addresses.Source, nft.mineAddress(right)...)
 						case "daddr":
-							rule.Addresses.Destination = append(rule.Addresses.Destination, nft.mineAddress(right)...)
+							r.Addresses.Destination = append(r.Addresses.Destination, nft.mineAddress(right)...)
 						case "sport":
-							rule.Ports.Source = append(rule.Ports.Source, nft.minePorts(right)...)
+							r.Ports.Source = append(r.Ports.Source, nft.minePorts(right)...)
 						case "dport":
-							rule.Ports.Destination = append(rule.Ports.Destination, nft.minePorts(right)...)
+							r.Ports.Destination = append(r.Ports.Destination, nft.minePorts(right)...)
 						}
 					}
 					continue
 				}
 			}
 		}
-		nft.setRuleCounters(rule)
+		nft.setRuleCounters(r)
 	}
 }
 
@@ -203,7 +203,7 @@ func (nft NFTables) portsToArray(right gjson.Result, keys []string) []string {
 	return ports
 }
 
-func (nft NFTables) setRuleCounters(rule Rule) {
+func (nft NFTables) setRuleCounters(rule nftablesRule) {
 	InputInterfaces := nft.arrayToTag(rule.Interfaces.Input)
 	OutputInterfaces := nft.arrayToTag(rule.Interfaces.Output)
 	SourceAddresses := nft.arrayToTag(rule.Addresses.Source)

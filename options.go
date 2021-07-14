@@ -9,17 +9,17 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+// options is a representation of a options
+type options struct {
+	Nft nftOptions `yaml:"nftables_exporter"`
+}
+
 // nftOptions is a inner representation of a options
 type nftOptions struct {
 	BindTo      string `yaml:"bind_to"`
 	URLPath     string `yaml:"url_path"`
 	FakeNftJSON string `yaml:"fake_nft_json"`
 	NFTLocation string `yaml:"nft_location"`
-}
-
-// options is a representation of a options
-type options struct {
-	Nft nftOptions `yaml:"nftables_exporter"`
 }
 
 // Parse options from yaml config file

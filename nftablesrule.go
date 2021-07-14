@@ -1,7 +1,7 @@
 package main
 
-// Rule - chain rule
-type Rule struct {
+// nftablesRule - chain rule
+type nftablesRule struct {
 	Chain      string
 	Table      string
 	Family     string
@@ -25,13 +25,13 @@ type Rule struct {
 	}
 }
 
-// NewRule is Rule constructor
-func NewRule(chain string, family string, table string) Rule {
-	rule := Rule{}
-	rule.Chain = chain
-	rule.Family = family
-	rule.Table = table
-	rule.Comment = "empty"
-	rule.Action = "policy"
-	return rule
+// newNFTablesRule is NFTablesRule constructor
+func newNFTablesRule(chain string, family string, table string) nftablesRule {
+	return nftablesRule{
+		Chain:   chain,
+		Family:  family,
+		Table:   table,
+		Comment: "empty",
+		Action:  "policy",
+	}
 }
