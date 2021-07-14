@@ -1,0 +1,27 @@
+name: master
+
+on:
+  pull_request:
+    branches:
+      - master
+
+jobs:
+
+  build:
+ 
+    runs-on: ubuntu-latest
+ 
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@master
+      - name: Lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          args: -p bugs -p unused
+      - name: Set up Go 1.16
+        uses: actions/setup-go@v2
+        with:
+          go-version: '1.16.x'
+      - name: Build project
+        run: |
+          make

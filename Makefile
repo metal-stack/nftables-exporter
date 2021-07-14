@@ -11,3 +11,14 @@ run: all
 clean:
 	@echo "Cleaning"
 	go clean
+
+.PHONY: release
+release: all
+	rm -rf rel
+	mkdir -p rel/usr/bin rel/etc/systemd/system
+	cp bin/nftables-exporter rel/usr/bin
+	cp nftables-exporter.service rel/etc/systemd/system
+	cd rel \
+	&& tar -cvzf nftables-exporter.tgz usr/bin/nftables-exporter etc/systemd/system/nftables-exporter.service \
+	&& mv nftables-exporter.tgz .. \
+	&& cd -
