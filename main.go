@@ -83,7 +83,7 @@ func (i nftablesManagerCollector) Collect(ch chan<- prometheus.Metric) {
 	if err != nil {
 		log.Printf("failed parsing nftables data: %s", err)
 	} else {
-		nft := NewNFTables(json, ch)
+		nft := newNFTables(json, ch)
 		nft.Collect()
 	}
 }

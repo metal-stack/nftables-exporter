@@ -9,22 +9,22 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// NFTables object
-type NFTables struct {
+// nftables object
+type nftables struct {
 	ch   chan<- prometheus.Metric
 	json gjson.Result
 }
 
-// NewNFTables is NFTables constructor
-func NewNFTables(json gjson.Result, ch chan<- prometheus.Metric) NFTables {
+// newNFTables is NFTables constructor
+func newNFTables(json gjson.Result, ch chan<- prometheus.Metric) nftables {
 	log.Print("collecting metrics")
-	nft := NFTables{}
+	nft := nftables{}
 	nft.ch = ch
 	nft.json = json
 	return nft
 }
 
-func (nft NFTables) arrayToTag(values []string) string {
+func (nft nftables) arrayToTag(values []string) string {
 	if len(values) == 0 {
 		return "any"
 	}
@@ -32,7 +32,7 @@ func (nft NFTables) arrayToTag(values []string) string {
 }
 
 // Collect metrics
-func (nft NFTables) Collect() {
+func (nft nftables) Collect() {
 	tables := nft.json.Get("#.table").Array()
 	chains := nft.json.Get("#.chain").Array()
 	rules := nft.json.Get("#.rule").Array()
@@ -72,7 +72,7 @@ func (nft NFTables) Collect() {
 }
 
 // Mining "rule": {} metrics
-func (nft NFTables) mineRule(value gjson.Result) {
+func (nft nftables) mineRule(value gjson.Result) {
 	// fmt.Printf("[rule] %s = %s\n", key, value)
 	r := newNFTablesRule(value.Get("chain").String(), value.Get("family").String(), value.Get("table").String())
 	counter := value.Get("expr.#.counter|0")
@@ -124,7 +124,7 @@ func (nft NFTables) mineRule(value gjson.Result) {
 	}
 }
 
-func (nft NFTables) mineAction(expr gjson.Result) string {
+func (nft nftables) mineAction(expr gjson.Result) string {
 	// logger.Info("%+v", value.Get("expr.#.(drop|accept|masquerade)"))
 	for _, action := range []string{"drop", "accept", "masquerade"} {
 		// logger.Info("%+v", expr.Get(fmt.Sprintf("#.%s", action)))
@@ -137,7 +137,7 @@ func (nft NFTables) mineAction(expr gjson.Result) string {
 	return "policy"
 }
 
-func (nft NFTables) mineAddress(right gjson.Result) []string {
+func (nft nftables) mineAddress(right gjson.Result) []string {
 	switch right.Type {
 	case gjson.String:
 		return []string{right.String()}
@@ -164,11 +164,11 @@ func (nft NFTables) mineAddress(right gjson.Result) []string {
 	return []string{}
 }
 
-func (nft NFTables) subnetToString(prefix gjson.Result) string {
+func (nft nftables) subnetToString(prefix gjson.Result) string {
 	return fmt.Sprintf("%s/%s", prefix.Get("addr").String(), prefix.Get("len").String())
 }
 
-func (nft NFTables) minePorts(right gjson.Result) []string {
+func (nft nftables) minePorts(right gjson.Result) []string {
 	switch right.Type {
 	case gjson.String, gjson.Number:
 		return []string{right.String()}
@@ -180,7 +180,7 @@ func (nft NFTables) minePorts(right gjson.Result) []string {
 	return []string{}
 }
 
-func (nft NFTables) portsToArray(right gjson.Result, keys []string) []string {
+func (nft nftables) portsToArray(right gjson.Result, keys []string) []string {
 	var ports []string
 	for _, key := range keys {
 		values := right.Get(key)
@@ -203,7 +203,7 @@ func (nft NFTables) portsToArray(right gjson.Result, keys []string) []string {
 	return ports
 }
 
-func (nft NFTables) setRuleCounters(rule nftablesRule) {
+func (nft nftables) setRuleCounters(rule nftablesRule) {
 	InputInterfaces := nft.arrayToTag(rule.Interfaces.Input)
 	OutputInterfaces := nft.arrayToTag(rule.Interfaces.Output)
 	SourceAddresses := nft.arrayToTag(rule.Addresses.Source)
