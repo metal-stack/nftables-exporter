@@ -5,13 +5,13 @@ import (
 	"net/http"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var (
-	options         Options
-	logger          Logger
-	promhttpHandler = promhttp.Handler()
+	options Options
+	logger  Logger
 
 	tableChainsDesc = prometheus.NewDesc(
 		"nftables_table_chains",
@@ -70,17 +70,17 @@ var (
 	)
 )
 
-// NFTablesManagerCollector implements the Collector interface.
-type NFTablesManagerCollector struct {
+// nftablesManagerCollector implements the Collector interface.
+type nftablesManagerCollector struct {
 }
 
 // Describe sends the super-set of all possible descriptors of metrics
-func (i NFTablesManagerCollector) Describe(ch chan<- *prometheus.Desc) {
+func (i nftablesManagerCollector) Describe(ch chan<- *prometheus.Desc) {
 	prometheus.DescribeByCollect(i, ch)
 }
 
 // Collect is called by the Prometheus registry when collecting metrics.
-func (i NFTablesManagerCollector) Collect(ch chan<- prometheus.Metric) {
+func (i nftablesManagerCollector) Collect(ch chan<- prometheus.Metric) {
 	json, err := readData()
 	if err != nil {
 		logger.Error("Failed parsing nftables data: %s", err)
@@ -97,11 +97,11 @@ func init() {
 func main() {
 	reg := prometheus.NewPedanticRegistry()
 	reg.MustRegister(
-		prometheus.NewProcessCollector(prometheus.ProcessCollectorOpts{}),
-		prometheus.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+		collectors.NewGoCollector(),
 	)
 
-	prometheus.WrapRegistererWithPrefix("", reg).MustRegister(NFTablesManagerCollector{})
+	prometheus.WrapRegistererWithPrefix("", reg).MustRegister(nftablesManagerCollector{})
 
 	logger.Info("Starting on %s%s", options.Nft.BindTo, options.Nft.URLPath)
 	http.Handle(options.Nft.URLPath, promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))

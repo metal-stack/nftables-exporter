@@ -1,5 +1,0 @@
-nftables_exporter:
-  bind_to: "[::1]:9630"
-  url_path: "/metrics"
-  fake_nft_json: nft.json
-  nft_location: /sbin/nft

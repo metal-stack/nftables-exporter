@@ -3,10 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -42,7 +41,7 @@ func loadOptions() Options {
 	logger = newLogger(*verbose, *debug)
 
 	logger.Verbose("Read options from %s\n", *configFile)
-	yamlFile, err := ioutil.ReadFile(*configFile)
+	yamlFile, err := os.ReadFile(*configFile)
 	if err != nil {
 		logger.Panic("Failed read %s: %s", configFile, err)
 	}

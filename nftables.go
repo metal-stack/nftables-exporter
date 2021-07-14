@@ -157,6 +157,8 @@ func (nft NFTables) mineAddress(right gjson.Result) []string {
 				return addresses
 			}
 		}
+	case gjson.False, gjson.Null, gjson.Number, gjson.True:
+		// noop
 	}
 	return []string{}
 }
@@ -171,6 +173,8 @@ func (nft NFTables) minePorts(right gjson.Result) []string {
 		return []string{right.String()}
 	case gjson.JSON:
 		return nft.portsToArray(right, []string{"set", "range"})
+	case gjson.False, gjson.Null, gjson.True:
+		// noop
 	}
 	return []string{}
 }
@@ -188,6 +192,8 @@ func (nft NFTables) portsToArray(right gjson.Result, keys []string) []string {
 					ports = append(ports, port.String())
 				case gjson.JSON:
 					ports = append(ports, nft.portsToArray(port, []string{"set", "range"})...)
+				case gjson.False, gjson.Null, gjson.True:
+					// noop
 				}
 			}
 		}
