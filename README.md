@@ -10,10 +10,10 @@ Export nftables statistics to prometheus, original source from [https://github.c
 
 ### Command line options
 
-* `--config=/path/to/file.yaml`: Path to configuration file, default `/etc/nftables_exporter.yaml`
-* `--verbose`: verbosed log, default no
-* `--debug`: Debug logging, default no
-* `--version`: Show version and exit
+- `--config=/path/to/file.yaml`: Path to configuration file, default `/etc/nftables_exporter.yaml`
+- `--verbose`: verbosed log, default no
+- `--debug`: Debug logging, default no
+- `--version`: Show version and exit
 
 ### Configuration file
 
@@ -31,7 +31,7 @@ nftables_exporter:
 
 ## Example metrics
 
-```toml
+```config
 # HELP nftables_chain_rules Count rules in chain
 # TYPE nftables_chain_rules gauge
 nftables_chain_rules{family="inet",name="forward",table="filter"} 2.0
