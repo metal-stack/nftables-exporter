@@ -50,4 +50,4 @@ nftables_rule_packets{action="accept",chain="host_spc",comment="[spc->internet] 
 
 ## Thank to
 
-* [@onokonem](https://github.com/onokonem)
+- [@onokonem](https://github.com/onokonem)
