@@ -18,10 +18,10 @@ type nftables struct {
 // newNFTables is NFTables constructor
 func newNFTables(json gjson.Result, ch chan<- prometheus.Metric) nftables {
 	log.Print("collecting metrics")
-	nft := nftables{}
-	nft.ch = ch
-	nft.json = json
-	return nft
+	return nftables{
+		ch:   ch,
+		json: json,
+	}
 }
 
 func (nft nftables) arrayToTag(values []string) string {
@@ -44,6 +44,7 @@ func (nft nftables) Collect() {
 			if jChain.Get("table").String() == table && jChain.Get("family").String() == family {
 				tableChains++
 				chain := jChain.Get("name").String()
+				handle := jChain.Get("handle").String()
 				chainRules := 0
 				for _, jRule := range rules {
 					if jRule.Get("table").String() == table && jRule.Get("family").String() == family && jRule.Get("chain").String() == chain {
@@ -58,6 +59,7 @@ func (nft nftables) Collect() {
 					chain,
 					family,
 					table,
+					handle,
 				)
 			}
 		}
@@ -74,7 +76,7 @@ func (nft nftables) Collect() {
 // Mining "rule": {} metrics
 func (nft nftables) mineRule(value gjson.Result) {
 	// fmt.Printf("[rule] %s = %s\n", key, value)
-	r := newNFTablesRule(value.Get("chain").String(), value.Get("family").String(), value.Get("table").String())
+	r := newNFTablesRule(value.Get("chain").String(), value.Get("family").String(), value.Get("table").String(), value.Get("handle").String())
 	counter := value.Get("expr.#.counter|0")
 	if counter.Exists() {
 		// fmt.Println(counter.Get("bytes").Float(), counter.Get("packets").Float())
@@ -226,6 +228,7 @@ func (nft nftables) setRuleCounters(rule nftablesRule) {
 		DestinationPorts,
 		rule.Comment,
 		rule.Action,
+		rule.Handle,
 	)
 	nft.ch <- prometheus.MustNewConstMetric(
 		rulePacketsDesc,
@@ -242,5 +245,6 @@ func (nft nftables) setRuleCounters(rule nftablesRule) {
 		DestinationPorts,
 		rule.Comment,
 		rule.Action,
+		rule.Handle,
 	)
 }

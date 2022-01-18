@@ -7,6 +7,7 @@ type nftablesRule struct {
 	Family     string
 	Comment    string
 	Action     string
+	Handle     string
 	Interfaces struct {
 		Input  []string
 		Output []string
@@ -26,12 +27,13 @@ type nftablesRule struct {
 }
 
 // newNFTablesRule is NFTablesRule constructor
-func newNFTablesRule(chain string, family string, table string) nftablesRule {
+func newNFTablesRule(chain, family, table, handle string) nftablesRule {
 	return nftablesRule{
 		Chain:   chain,
 		Family:  family,
 		Table:   table,
 		Comment: "empty",
 		Action:  "policy",
+		Handle:  handle,
 	}
 }
