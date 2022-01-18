@@ -26,6 +26,7 @@ var (
 			"name",
 			"family",
 			"table",
+			"handle",
 		},
 		nil,
 	)
@@ -44,6 +45,7 @@ var (
 			"destination_ports",
 			"comment",
 			"action",
+			"handle",
 		},
 		nil,
 	)
@@ -62,6 +64,7 @@ var (
 			"destination_ports",
 			"comment",
 			"action",
+			"handle",
 		},
 		nil,
 	)
