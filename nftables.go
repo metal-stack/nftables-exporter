@@ -24,15 +24,28 @@ func newNFTables(json gjson.Result, ch chan<- prometheus.Metric) nftables {
 	}
 }
 
-func (nft nftables) arrayToTag(values []string) string {
-	if len(values) == 0 {
-		return "any"
-	}
-	return strings.Join(values, ",")
-}
-
 // Collect metrics
 func (nft nftables) Collect() {
+	tableChainsDesc := prometheus.NewDesc(
+		"nftables_table_chains",
+		"Count chains in table",
+		[]string{
+			"name",
+			"family",
+		},
+		nil,
+	)
+	chainRulesDesc := prometheus.NewDesc(
+		"nftables_chain_rules",
+		"Count rules in chain",
+		[]string{
+			"name",
+			"family",
+			"table",
+			"handle",
+		},
+		nil,
+	)
 	tables := nft.json.Get("#.table").Array()
 	chains := nft.json.Get("#.chain").Array()
 	rules := nft.json.Get("#.rule").Array()
@@ -206,12 +219,32 @@ func (nft nftables) portsToArray(right gjson.Result, keys []string) []string {
 }
 
 func (nft nftables) setRuleCounters(rule nftablesRule) {
-	InputInterfaces := nft.arrayToTag(rule.Interfaces.Input)
-	OutputInterfaces := nft.arrayToTag(rule.Interfaces.Output)
-	SourceAddresses := nft.arrayToTag(rule.Addresses.Source)
-	DestinationAddresses := nft.arrayToTag(rule.Addresses.Destination)
-	SourcePorts := nft.arrayToTag(rule.Ports.Source)
-	DestinationPorts := nft.arrayToTag(rule.Ports.Destination)
+	inputInterfaces := nft.arrayToTag(rule.Interfaces.Input)
+	outputInterfaces := nft.arrayToTag(rule.Interfaces.Output)
+	sourceAddresses := nft.arrayToTag(rule.Addresses.Source)
+	destinationAddresses := nft.arrayToTag(rule.Addresses.Destination)
+	sourcePorts := nft.arrayToTag(rule.Ports.Source)
+	destinationPorts := nft.arrayToTag(rule.Ports.Destination)
+
+	ruleBytesDesc := prometheus.NewDesc(
+		"nftables_rule_bytes",
+		"Bytes, matched by rule per rule comment",
+		[]string{
+			"chain",
+			"family",
+			"table",
+			"input_interfaces",
+			"output_interfaces",
+			"source_addresses",
+			"destination_addresses",
+			"source_ports",
+			"destination_ports",
+			"comment",
+			"action",
+			"handle",
+		},
+		nil,
+	)
 	// logger.Verbose(fmt.Sprintf("%s.%s.%s => %s:%s:%s -> %s:%s:%s = %f, %s, %s", rule.Chain, rule.Family, rule.Table, InputInterfaces, SourceAddresses, SourcePorts, OutputInterfaces, DestinationAddresses, DestinationPorts, rule.Couters.Bytes, rule.Action, rule.Comment))
 	nft.ch <- prometheus.MustNewConstMetric(
 		ruleBytesDesc,
@@ -220,15 +253,35 @@ func (nft nftables) setRuleCounters(rule nftablesRule) {
 		rule.Chain,
 		rule.Family,
 		rule.Table,
-		InputInterfaces,
-		OutputInterfaces,
-		SourceAddresses,
-		DestinationAddresses,
-		SourcePorts,
-		DestinationPorts,
+		inputInterfaces,
+		outputInterfaces,
+		sourceAddresses,
+		destinationAddresses,
+		sourcePorts,
+		destinationPorts,
 		rule.Comment,
 		rule.Action,
 		rule.Handle,
+	)
+
+	rulePacketsDesc := prometheus.NewDesc(
+		"nftables_rule_packets",
+		"Packets, matched by rule per rule comment",
+		[]string{
+			"chain",
+			"family",
+			"table",
+			"input_interfaces",
+			"output_interfaces",
+			"source_addresses",
+			"destination_addresses",
+			"source_ports",
+			"destination_ports",
+			"comment",
+			"action",
+			"handle",
+		},
+		nil,
 	)
 	nft.ch <- prometheus.MustNewConstMetric(
 		rulePacketsDesc,
@@ -237,14 +290,21 @@ func (nft nftables) setRuleCounters(rule nftablesRule) {
 		rule.Chain,
 		rule.Family,
 		rule.Table,
-		InputInterfaces,
-		OutputInterfaces,
-		SourceAddresses,
-		DestinationAddresses,
-		SourcePorts,
-		DestinationPorts,
+		inputInterfaces,
+		outputInterfaces,
+		sourceAddresses,
+		destinationAddresses,
+		sourcePorts,
+		destinationPorts,
 		rule.Comment,
 		rule.Action,
 		rule.Handle,
 	)
+}
+
+func (nft nftables) arrayToTag(values []string) string {
+	if len(values) == 0 {
+		return "any"
+	}
+	return strings.Join(values, ",")
 }
