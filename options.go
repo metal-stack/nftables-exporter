@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/metal-stack/v"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 // options is a representation of a options
