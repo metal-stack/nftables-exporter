@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -42,5 +43,9 @@ func main() {
 
 	log.Printf("starting on %s%s", opts.Nft.BindTo, opts.Nft.URLPath)
 	http.Handle(opts.Nft.URLPath, promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
-	log.Fatal(http.ListenAndServe(opts.Nft.BindTo, nil))
+	server := http.Server{
+		Addr:              opts.Nft.BindTo,
+		ReadHeaderTimeout: 1 * time.Minute,
+	}
+	log.Fatal(server.ListenAndServe())
 }
