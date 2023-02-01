@@ -14,7 +14,7 @@ all:
 		-ldflags "-X 'github.com/metal-stack/v.Version=$(VERSION)' \
 				  -X 'github.com/metal-stack/v.Revision=$(GITVERSION)' \
 				  -X 'github.com/metal-stack/v.GitSHA1=$(SHA)' \
-				  -X 'github.com/metal-stacj/v.BuildDate=$(BUILDDATE)'" \
+				  -X 'github.com/metal-stack/v.BuildDate=$(BUILDDATE)'" \
 		-o bin/$(GONAME) $(GOFILES)
 	strip bin/$(GONAME)
 
