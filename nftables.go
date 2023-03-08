@@ -74,12 +74,12 @@ func (nft nftables) Collect() {
 		name := jCounter.Get("name").String()
 		table := jCounter.Get("table").String()
 		family := jCounter.Get("family").String()
-		packets := jCounter.Get("packets").Float()
-		bytes := jCounter.Get("bytes").Float()
+		packets := jCounter.Get("packets").Uint()
+		bytes := jCounter.Get("bytes").Uint()
 
 		nft.ch <- prometheus.MustNewConstMetric(
 			counterBytesDesc,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(bytes),
 			name,
 			table,
@@ -87,7 +87,7 @@ func (nft nftables) Collect() {
 		)
 		nft.ch <- prometheus.MustNewConstMetric(
 			counterPacketsDesc,
-			prometheus.GaugeValue,
+			prometheus.CounterValue,
 			float64(packets),
 			name,
 			table,
