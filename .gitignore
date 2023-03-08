@@ -1,0 +1,7 @@
+vendor
+bin
+nft.json
+
+Manifest
+.vscode
+rules.json
