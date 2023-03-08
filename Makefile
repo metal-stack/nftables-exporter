@@ -19,7 +19,7 @@ all:
 	strip bin/$(GONAME)
 
 run: all
-	go run $(GOFILES) --config=$(shell pwd)/nftables_exporter.yaml --debug --verbose
+	go run $(GOFILES) --config=$(shell pwd)/nftables_exporter.yaml
 
 clean:
 	@echo "Cleaning"
