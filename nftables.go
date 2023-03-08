@@ -26,6 +26,26 @@ func newNFTables(json gjson.Result, ch chan<- prometheus.Metric) nftables {
 
 // Collect metrics
 func (nft nftables) Collect() {
+	counterBytesDesc := prometheus.NewDesc(
+		"nftables_counter_bytes",
+		"Bytes, matched by counter",
+		[]string{
+			"name",
+			"table",
+			"family",
+		},
+		nil,
+	)
+	counterPacketsDesc := prometheus.NewDesc(
+		"nftables_counter_packets",
+		"Packets, matched by counter",
+		[]string{
+			"name",
+			"table",
+			"family",
+		},
+		nil,
+	)
 	tableChainsDesc := prometheus.NewDesc(
 		"nftables_table_chains",
 		"Count chains in table",
@@ -49,6 +69,31 @@ func (nft nftables) Collect() {
 	tables := nft.json.Get("#.table").Array()
 	chains := nft.json.Get("#.chain").Array()
 	rules := nft.json.Get("#.rule").Array()
+	counters := nft.json.Get("#.counter").Array()
+	for _, jCounter := range counters {
+		name := jCounter.Get("name").String()
+		table := jCounter.Get("table").String()
+		family := jCounter.Get("family").String()
+		packets := jCounter.Get("packets").Float()
+		bytes := jCounter.Get("bytes").Float()
+
+		nft.ch <- prometheus.MustNewConstMetric(
+			counterBytesDesc,
+			prometheus.GaugeValue,
+			float64(bytes),
+			name,
+			table,
+			family,
+		)
+		nft.ch <- prometheus.MustNewConstMetric(
+			counterPacketsDesc,
+			prometheus.GaugeValue,
+			float64(packets),
+			name,
+			table,
+			family,
+		)
+	}
 	for _, jTable := range tables {
 		table := jTable.Get("name").String()
 		family := jTable.Get("family").String()
