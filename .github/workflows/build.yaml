@@ -1,0 +1,49 @@
+---
+name: Build Action
+on:
+  pull_request:
+    branches:
+      - master
+  release:
+    types:
+      - published
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+
+    - name: Ensure Go Version
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.20'
+
+    - name: Lint
+      uses: golangci/golangci-lint-action@v3
+      with:
+        args: --build-tags integration -p bugs -p unused --timeout=3m
+
+    - name: Make tag
+      run: |
+        [ "${GITHUB_EVENT_NAME}" == 'pull_request' ] && echo "GITHUB_TAG_NAME=$(echo $GITHUB_REF | awk -F / '{print $3}')-${GITHUB_HEAD_REF##*/}" >> $GITHUB_ENV || true
+        [ "${GITHUB_EVENT_NAME}" == 'release' ] && echo "GITHUB_TAG_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV || true
+        [ "${GITHUB_EVENT_NAME}" == 'push' ] && echo "GITHUB_TAG_NAME=latest" >> $GITHUB_ENV || true
+
+    - name: Build project
+      run: |
+        make
+
+    - name: Upload Release Asset
+      uses: softprops/action-gh-release@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        files: |
+          bin/nftables-exporter*
+      if: ${{ github.event_name == 'release' }}
