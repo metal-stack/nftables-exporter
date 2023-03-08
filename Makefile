@@ -17,6 +17,8 @@ all:
 				  -X 'github.com/metal-stack/v.BuildDate=$(BUILDDATE)'" \
 		-o bin/$(GONAME) $(GOFILES)
 	strip bin/$(GONAME)
+	sha256sum bin/$(GONAME) > bin/$(GONAME).sha256
+
 
 run: all
 	go run $(GOFILES) --config=$(shell pwd)/nftables_exporter.yaml
