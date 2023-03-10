@@ -30,6 +30,7 @@ clean:
 .PHONY: release
 release: all
 	rm -rf rel
+	rm -f nftables-exporter.tgz
 	mkdir -p rel/usr/bin rel/etc/systemd/system
 	cp bin/nftables-exporter rel/usr/bin
 	cp systemd/nftables-exporter.service rel/etc/systemd/system
