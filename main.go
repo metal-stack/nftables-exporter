@@ -17,7 +17,12 @@ type nftablesManagerCollector struct {
 
 // Describe sends the super-set of all possible descriptors of metrics
 func (i nftablesManagerCollector) Describe(ch chan<- *prometheus.Desc) {
-	prometheus.DescribeByCollect(i, ch)
+	ch <- counterBytesDesc
+	ch <- counterPacketsDesc
+	ch <- tableChainsDesc
+	ch <- chainRulesDesc
+	ch <- ruleBytesDesc
+	ch <- rulePacketsDesc
 }
 
 // Collect is called by the Prometheus registry when collecting metrics.

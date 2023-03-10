@@ -26,46 +26,6 @@ func newNFTables(json gjson.Result, ch chan<- prometheus.Metric) nftables {
 
 // Collect metrics
 func (nft nftables) Collect() {
-	counterBytesDesc := prometheus.NewDesc(
-		"nftables_counter_bytes",
-		"Bytes, matched by counter",
-		[]string{
-			"name",
-			"table",
-			"family",
-		},
-		nil,
-	)
-	counterPacketsDesc := prometheus.NewDesc(
-		"nftables_counter_packets",
-		"Packets, matched by counter",
-		[]string{
-			"name",
-			"table",
-			"family",
-		},
-		nil,
-	)
-	tableChainsDesc := prometheus.NewDesc(
-		"nftables_table_chains",
-		"Count chains in table",
-		[]string{
-			"name",
-			"family",
-		},
-		nil,
-	)
-	chainRulesDesc := prometheus.NewDesc(
-		"nftables_chain_rules",
-		"Count rules in chain",
-		[]string{
-			"name",
-			"family",
-			"table",
-			"handle",
-		},
-		nil,
-	)
 	tables := nft.json.Get("#.table").Array()
 	chains := nft.json.Get("#.chain").Array()
 	rules := nft.json.Get("#.rule").Array()
@@ -271,25 +231,6 @@ func (nft nftables) setRuleCounters(rule nftablesRule) {
 	sourcePorts := nft.arrayToTag(rule.Ports.Source)
 	destinationPorts := nft.arrayToTag(rule.Ports.Destination)
 
-	ruleBytesDesc := prometheus.NewDesc(
-		"nftables_rule_bytes",
-		"Bytes, matched by rule per rule comment",
-		[]string{
-			"chain",
-			"family",
-			"table",
-			"input_interfaces",
-			"output_interfaces",
-			"source_addresses",
-			"destination_addresses",
-			"source_ports",
-			"destination_ports",
-			"comment",
-			"action",
-			"handle",
-		},
-		nil,
-	)
 	// logger.Verbose(fmt.Sprintf("%s.%s.%s => %s:%s:%s -> %s:%s:%s = %f, %s, %s", rule.Chain, rule.Family, rule.Table, InputInterfaces, SourceAddresses, SourcePorts, OutputInterfaces, DestinationAddresses, DestinationPorts, rule.Couters.Bytes, rule.Action, rule.Comment))
 	nft.ch <- prometheus.MustNewConstMetric(
 		ruleBytesDesc,
@@ -309,25 +250,6 @@ func (nft nftables) setRuleCounters(rule nftablesRule) {
 		rule.Handle,
 	)
 
-	rulePacketsDesc := prometheus.NewDesc(
-		"nftables_rule_packets",
-		"Packets, matched by rule per rule comment",
-		[]string{
-			"chain",
-			"family",
-			"table",
-			"input_interfaces",
-			"output_interfaces",
-			"source_addresses",
-			"destination_addresses",
-			"source_ports",
-			"destination_ports",
-			"comment",
-			"action",
-			"handle",
-		},
-		nil,
-	)
 	nft.ch <- prometheus.MustNewConstMetric(
 		rulePacketsDesc,
 		prometheus.CounterValue,
