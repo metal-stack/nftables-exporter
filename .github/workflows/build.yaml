@@ -52,7 +52,7 @@ jobs:
 
     - name: Build project
       run: |
-        make
+        make release
 
     - name: Upload image tarballs to GCS
       run: |
