@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -32,6 +34,8 @@ func (i nftablesManagerCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func main() {
+	// set json logger as default for all log statements
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	opts := loadOptions()
 	reg := prometheus.NewPedanticRegistry()
 	reg.MustRegister(
