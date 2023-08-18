@@ -2,7 +2,9 @@ package main
 
 import (
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -17,7 +19,12 @@ type nftablesManagerCollector struct {
 
 // Describe sends the super-set of all possible descriptors of metrics
 func (i nftablesManagerCollector) Describe(ch chan<- *prometheus.Desc) {
-	prometheus.DescribeByCollect(i, ch)
+	ch <- counterBytesDesc
+	ch <- counterPacketsDesc
+	ch <- tableChainsDesc
+	ch <- chainRulesDesc
+	ch <- ruleBytesDesc
+	ch <- rulePacketsDesc
 }
 
 // Collect is called by the Prometheus registry when collecting metrics.
@@ -32,6 +39,8 @@ func (i nftablesManagerCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func main() {
+	// set json logger as default for all log statements
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	opts := loadOptions()
 	reg := prometheus.NewPedanticRegistry()
 	reg.MustRegister(
