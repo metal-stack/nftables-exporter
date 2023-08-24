@@ -33,7 +33,7 @@ func readNFTables(opts options) (gjson.Result, error) {
 	nft := opts.Nft.NFTLocation
 	out, err := exec.Command(nft, "-j", "list", "ruleset").Output()
 	if err != nil {
-		log.Fatalf("nftables reading error: %s", err)
+		log.Printf("nftables reading error: %s", err)
 	}
 	return parseJSON(string(out))
 }
