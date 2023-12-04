@@ -3,6 +3,12 @@ package main
 import "github.com/prometheus/client_golang/prometheus"
 
 var (
+	upDesc = prometheus.NewDesc(
+		"nftables_up",
+		"'1' if reading the nft output was successful, '0' otherwise",
+		nil,
+		nil,
+	)
 	counterBytesDesc = prometheus.NewDesc(
 		"nftables_counter_bytes",
 		"Bytes, matched by counter",

@@ -19,6 +19,7 @@ type nftablesManagerCollector struct {
 
 // Describe sends the super-set of all possible descriptors of metrics
 func (i nftablesManagerCollector) Describe(ch chan<- *prometheus.Desc) {
+	ch <- upDesc
 	ch <- counterBytesDesc
 	ch <- counterPacketsDesc
 	ch <- tableChainsDesc
@@ -32,7 +33,9 @@ func (i nftablesManagerCollector) Collect(ch chan<- prometheus.Metric) {
 	json, err := readData(i.opts)
 	if err != nil {
 		log.Printf("failed parsing nftables data: %s", err)
+		ch <- prometheus.MustNewConstMetric(upDesc, prometheus.GaugeValue, 0)
 	} else {
+		ch <- prometheus.MustNewConstMetric(upDesc, prometheus.GaugeValue, 1)
 		nft := newNFTables(json, ch)
 		nft.Collect()
 	}
