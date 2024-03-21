@@ -21,12 +21,12 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Ensure Go Version
-      uses: actions/setup-go@v4
+      uses: actions/setup-go@v5
       with:
-        go-version: '1.21'
+        go-version: '1.22'
 
     - uses: google-github-actions/auth@v1
       with:
@@ -36,7 +36,7 @@ jobs:
       uses: google-github-actions/setup-gcloud@v0
 
     - name: Lint
-      uses: golangci/golangci-lint-action@v3
+      uses: golangci/golangci-lint-action@v4
       with:
         args: --build-tags integration -p bugs -p unused --timeout=3m
 
