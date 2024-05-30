@@ -171,9 +171,17 @@ func (nft nftables) mineAddress(right gjson.Result) []string {
 			if set.Exists() {
 				var addresses []string
 				// fmt.Printf("[prefix] %s\n", set.Get("#.prefix"))
-				for _, prefix := range set.Get("#.prefix").Array() {
-					// fmt.Printf("[prefix] %s\n", prefix)
-					addresses = append(addresses, nft.subnetToString(prefix))
+				for _, el := range set.Array() {
+					switch el.Type {
+					case gjson.String:
+						addresses = append(addresses, el.String())
+					case gjson.JSON:
+						if el.Get("prefix").Exists() {
+							addresses = append(addresses, nft.subnetToString(el.Get("prefix")))
+						}
+					case gjson.False, gjson.Null, gjson.True:
+						// noop
+					}
 				}
 				return addresses
 			}
