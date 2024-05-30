@@ -20,7 +20,7 @@ type nftablesRule struct {
 		Source      []string
 		Destination []string
 	}
-	Couters struct {
+	Counters struct {
 		Bytes   float64
 		Packets float64
 	}

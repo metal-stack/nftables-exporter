@@ -98,8 +98,8 @@ func (nft nftables) mineRule(value gjson.Result) {
 	counter := value.Get("expr.#.counter|0")
 	if counter.Exists() {
 		// fmt.Println(counter.Get("bytes").Float(), counter.Get("packets").Float())
-		r.Couters.Bytes = counter.Get("bytes").Float()
-		r.Couters.Packets = counter.Get("packets").Float()
+		r.Counters.Bytes = counter.Get("bytes").Float()
+		r.Counters.Packets = counter.Get("packets").Float()
 		comment := value.Get("comment")
 		r.Action = nft.mineAction(value.Get("expr"))
 		if comment.Exists() {
@@ -179,7 +179,7 @@ func (nft nftables) mineAddress(right gjson.Result) []string {
 						if el.Get("prefix").Exists() {
 							addresses = append(addresses, nft.subnetToString(el.Get("prefix")))
 						}
-					case gjson.False, gjson.Null, gjson.True:
+					case gjson.False, gjson.Null, gjson.True, gjson.Number:
 						// noop
 					}
 				}
@@ -239,11 +239,11 @@ func (nft nftables) setRuleCounters(rule nftablesRule) {
 	sourcePorts := nft.arrayToTag(rule.Ports.Source)
 	destinationPorts := nft.arrayToTag(rule.Ports.Destination)
 
-	// logger.Verbose(fmt.Sprintf("%s.%s.%s => %s:%s:%s -> %s:%s:%s = %f, %s, %s", rule.Chain, rule.Family, rule.Table, InputInterfaces, SourceAddresses, SourcePorts, OutputInterfaces, DestinationAddresses, DestinationPorts, rule.Couters.Bytes, rule.Action, rule.Comment))
+	// logger.Verbose(fmt.Sprintf("%s.%s.%s => %s:%s:%s -> %s:%s:%s = %f, %s, %s", rule.Chain, rule.Family, rule.Table, InputInterfaces, SourceAddresses, SourcePorts, OutputInterfaces, DestinationAddresses, DestinationPorts, rule.Counters.Bytes, rule.Action, rule.Comment))
 	nft.ch <- prometheus.MustNewConstMetric(
 		ruleBytesDesc,
 		prometheus.CounterValue,
-		rule.Couters.Bytes,
+		rule.Counters.Bytes,
 		rule.Chain,
 		rule.Family,
 		rule.Table,
@@ -261,7 +261,7 @@ func (nft nftables) setRuleCounters(rule nftablesRule) {
 	nft.ch <- prometheus.MustNewConstMetric(
 		rulePacketsDesc,
 		prometheus.CounterValue,
-		rule.Couters.Packets,
+		rule.Counters.Packets,
 		rule.Chain,
 		rule.Family,
 		rule.Table,
