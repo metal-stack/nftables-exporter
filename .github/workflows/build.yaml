@@ -66,5 +66,5 @@ jobs:
         token: ${{ secrets.GITHUB_TOKEN }}
         files: |
           bin/nftables-exporter*
-          nftables-exporter.tgz
+          nftables-exporter*.tgz
       if: ${{ github.event_name == 'release' }}
