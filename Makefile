@@ -6,8 +6,11 @@ VERSION := $(or ${GITHUB_TAG_NAME},$(shell git describe --tags --exact-match 2> 
 
 GOFILES=$(wildcard *.go)
 GONAME=$(shell basename "$(PWD)")
+GOOS := linux
+GOARCH := amd64
+BINARY := $(GONAME)-$(GOOS)-$(GOARCH)
 
-all:
+build:
 	go build \
 		-trimpath \
 		-tags netgo \
@@ -15,26 +18,31 @@ all:
 				  -X 'github.com/metal-stack/v.Revision=$(GITVERSION)' \
 				  -X 'github.com/metal-stack/v.GitSHA1=$(SHA)' \
 				  -X 'github.com/metal-stack/v.BuildDate=$(BUILDDATE)'" \
-		-o bin/$(GONAME) $(GOFILES)
-	strip bin/$(GONAME)
-	sha256sum bin/$(GONAME) > bin/$(GONAME).sha256
+		-o bin/$(BINARY) $(GOFILES)
+	strip bin/$(BINARY)
+	sha256sum bin/$(BINARY) > bin/$(BINARY).sha256
 
-
-run: all
+run:
+	$(MAKE) build BINARY=$(GONAME)-dev
 	go run $(GOFILES) --config=$(shell pwd)/nftables_exporter.yaml
 
 clean:
 	@echo "Cleaning"
 	go clean
 
+##
+# Release
+##
+
 .PHONY: release
-release: all
+release: build
 	rm -rf rel
 	rm -f nftables-exporter.tgz
 	mkdir -p rel/usr/bin rel/etc/systemd/system
-	cp bin/nftables-exporter rel/usr/bin
+	cp bin/nftables-exporter-$(GOOS)-$(GOARCH) rel/usr/bin/nftables-exporter
 	cp systemd/nftables-exporter.service rel/etc/systemd/system
 	cd rel \
-	&& tar -cvzf nftables-exporter.tgz usr/bin/nftables-exporter etc/systemd/system/nftables-exporter.service \
-	&& mv nftables-exporter.tgz .. \
+	&& tar --transform="flags=r;s|-$(GOOS)-$(GOARCH)||" -cvzf nftables-exporter-$(GOOS)-$(GOARCH).tgz \
+		usr/bin/nftables-exporter etc/systemd/system/nftables-exporter.service \
+	&& mv nftables-exporter-$(GOOS)-$(GOARCH).tgz .. \
 	&& cd -

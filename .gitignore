@@ -1,6 +1,7 @@
 vendor
 bin
-nftables-exporter.tgz
+rel
+nftables-exporter*.tgz
 nft.json
 rules.json
 
