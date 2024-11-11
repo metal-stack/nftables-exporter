@@ -34,7 +34,7 @@ jobs:
     - name: Ensure Go Version
       uses: actions/setup-go@v5
       with:
-        go-version: '1.22'
+        go-version: '1.23'
 
     - uses: google-github-actions/auth@v1
       with:
