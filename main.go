@@ -3,6 +3,7 @@ package main
 import (
 	"log/slog"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -55,5 +56,8 @@ func main() {
 		Addr:              opts.Nft.BindTo,
 		ReadHeaderTimeout: 1 * time.Minute,
 	}
+
+	// ListenAndServe always returns non-nil error
 	slog.Error("http server exited", "error", server.ListenAndServe().Error())
+	os.Exit(1)
 }
