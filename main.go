@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -31,7 +30,7 @@ func (i nftablesManagerCollector) Describe(ch chan<- *prometheus.Desc) {
 func (i nftablesManagerCollector) Collect(ch chan<- prometheus.Metric) {
 	json, err := readData(i.opts)
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed parsing nftables data: %s", err))
+		slog.Error("failed to parse nftables data", "error", err)
 		ch <- prometheus.MustNewConstMetric(upDesc, prometheus.GaugeValue, 0)
 	} else {
 		ch <- prometheus.MustNewConstMetric(upDesc, prometheus.GaugeValue, 1)
@@ -50,11 +49,11 @@ func main() {
 
 	prometheus.WrapRegistererWithPrefix("", reg).MustRegister(nftablesManagerCollector{opts: opts})
 
-	slog.Info(fmt.Sprintf("starting on %s%s", opts.Nft.BindTo, opts.Nft.URLPath))
+	slog.Info("starting http server", "bind_to", opts.Nft.BindTo, "url_path", opts.Nft.URLPath)
 	http.Handle(opts.Nft.URLPath, promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	server := http.Server{
 		Addr:              opts.Nft.BindTo,
 		ReadHeaderTimeout: 1 * time.Minute,
 	}
-	slog.Error(server.ListenAndServe().Error())
+	slog.Error("http server exited", "error", server.ListenAndServe().Error())
 }

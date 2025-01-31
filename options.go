@@ -40,10 +40,10 @@ func loadOptions() options {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: logLevel,
 	})))
-	slog.Info(fmt.Sprintf("read options from %s\n", *configFile))
+	slog.Info("reading options from config file", "path", *configFile)
 	yamlFile, err := os.ReadFile(*configFile)
 	if err != nil {
-		slog.Error(fmt.Sprintf("failed read %s: %s", *configFile, err))
+		slog.Error("failed to read config file", "path", *configFile, "error", err)
 		os.Exit(1)
 	}
 
@@ -58,10 +58,10 @@ func loadOptions() options {
 	}
 
 	if yaml.Unmarshal(yamlFile, &opts) != nil {
-		slog.Error(fmt.Sprintf("failed parse %s: %s", *configFile, err))
+		slog.Error("failed to parse config file", "path", *configFile, "error", err)
 		os.Exit(1)
 	}
-	slog.Info(fmt.Sprintf("parsed options: %#v", opts))
+	slog.Info("parsed options", "opts", opts)
 	switch opts.Nft.LogLevel {
 	case "debug":
 		logLevel.Set(slog.LevelDebug)
@@ -72,7 +72,7 @@ func loadOptions() options {
 	case "error":
 		logLevel.Set(slog.LevelError)
 	default:
-		slog.Error(fmt.Sprintf("invalid log level %s. Allowed: debug,info,warn,error", opts.Nft.LogLevel))
+		slog.Error(fmt.Sprintf("invalid log level %s. allowed: debug,info,warn,error", opts.Nft.LogLevel))
 		os.Exit(1)
 	}
 
