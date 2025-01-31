@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"log/slog"
 	"net/http"
 	"os"
@@ -57,7 +58,10 @@ func main() {
 		ReadHeaderTimeout: 1 * time.Minute,
 	}
 
+	err := server.ListenAndServe()
 	// ListenAndServe always returns non-nil error
-	slog.Error("http server exited", "error", server.ListenAndServe().Error())
-	os.Exit(1)
+	if !errors.Is(err, http.ErrServerClosed) {
+		slog.Error("http server exited", "error", err)
+		os.Exit(1)
+	}
 }
