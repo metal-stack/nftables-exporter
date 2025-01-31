@@ -60,13 +60,14 @@ func loadOptions() options {
 		slog.Error("failed to parse config file", "path", *configFile, "error", err)
 		os.Exit(1)
 	}
-	slog.Info("parsed options", "opts", opts)
 
 	err = logLevel.UnmarshalText([]byte(opts.Nft.LogLevel))
 	if err != nil {
 		slog.Error("cannot parse log level", "error", err)
 		os.Exit(1)
 	}
+
+	slog.Info("parsed options", "opts", opts)
 
 	return opts
 }
