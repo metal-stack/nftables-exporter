@@ -2,7 +2,6 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"log"
 	"log/slog"
 	"os"
@@ -62,17 +61,10 @@ func loadOptions() options {
 		os.Exit(1)
 	}
 	slog.Info("parsed options", "opts", opts)
-	switch opts.Nft.LogLevel {
-	case "debug":
-		logLevel.Set(slog.LevelDebug)
-	case "info":
-		logLevel.Set(slog.LevelInfo)
-	case "warn":
-		logLevel.Set(slog.LevelWarn)
-	case "error":
-		logLevel.Set(slog.LevelError)
-	default:
-		slog.Error(fmt.Sprintf("invalid log level %s. allowed: debug,info,warn,error", opts.Nft.LogLevel))
+
+	err = logLevel.UnmarshalText([]byte(opts.Nft.LogLevel))
+	if err != nil {
+		slog.Error("cannot parse log level", "error", err)
 		os.Exit(1)
 	}
 
