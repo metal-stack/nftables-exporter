@@ -2,7 +2,9 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/metal-stack/v"
@@ -20,6 +22,7 @@ type nftOptions struct {
 	URLPath     string `yaml:"url_path"`
 	FakeNftJSON string `yaml:"fake_nft_json"`
 	NFTLocation string `yaml:"nft_location"`
+	LogLevel    string `yaml:"log_level"`
 }
 
 // Parse options from yaml config file
@@ -33,10 +36,15 @@ func loadOptions() options {
 		os.Exit(0)
 	}
 
-	log.Printf("read options from %s\n", *configFile)
+	logLevel := new(slog.LevelVar)
+	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: logLevel,
+	})))
+	slog.Info(fmt.Sprintf("read options from %s\n", *configFile))
 	yamlFile, err := os.ReadFile(*configFile)
 	if err != nil {
-		log.Fatalf("failed read %s: %s", *configFile, err)
+		slog.Error(fmt.Sprintf("failed read %s: %s", *configFile, err))
+		os.Exit(1)
 	}
 
 	opts := options{
@@ -45,12 +53,28 @@ func loadOptions() options {
 			URLPath:     "/metrics",
 			FakeNftJSON: "",
 			NFTLocation: "/sbin/nft",
+			LogLevel:    "warn",
 		},
 	}
 
 	if yaml.Unmarshal(yamlFile, &opts) != nil {
-		log.Fatalf("failed parse %s: %s", *configFile, err)
+		slog.Error(fmt.Sprintf("failed parse %s: %s", *configFile, err))
+		os.Exit(1)
 	}
-	log.Printf("parsed options: %#v", opts)
+	slog.Info(fmt.Sprintf("parsed options: %#v", opts))
+	switch opts.Nft.LogLevel {
+	case "debug":
+		logLevel.Set(slog.LevelDebug)
+	case "info":
+		logLevel.Set(slog.LevelInfo)
+	case "warn":
+		logLevel.Set(slog.LevelWarn)
+	case "error":
+		logLevel.Set(slog.LevelError)
+	default:
+		slog.Error(fmt.Sprintf("invalid log level %s. Allowed: debug,info,warn,error", opts.Nft.LogLevel))
+		os.Exit(1)
+	}
+
 	return opts
 }

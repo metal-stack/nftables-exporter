@@ -1,10 +1,9 @@
 package main
 
 import (
-	"log"
+	"fmt"
 	"log/slog"
 	"net/http"
-	"os"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -32,7 +31,7 @@ func (i nftablesManagerCollector) Describe(ch chan<- *prometheus.Desc) {
 func (i nftablesManagerCollector) Collect(ch chan<- prometheus.Metric) {
 	json, err := readData(i.opts)
 	if err != nil {
-		log.Printf("failed parsing nftables data: %s", err)
+		slog.Error(fmt.Sprintf("failed parsing nftables data: %s", err))
 		ch <- prometheus.MustNewConstMetric(upDesc, prometheus.GaugeValue, 0)
 	} else {
 		ch <- prometheus.MustNewConstMetric(upDesc, prometheus.GaugeValue, 1)
@@ -42,8 +41,6 @@ func (i nftablesManagerCollector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func main() {
-	// set json logger as default for all log statements
-	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
 	opts := loadOptions()
 	reg := prometheus.NewPedanticRegistry()
 	reg.MustRegister(
@@ -53,11 +50,11 @@ func main() {
 
 	prometheus.WrapRegistererWithPrefix("", reg).MustRegister(nftablesManagerCollector{opts: opts})
 
-	log.Printf("starting on %s%s", opts.Nft.BindTo, opts.Nft.URLPath)
+	slog.Info(fmt.Sprintf("starting on %s%s", opts.Nft.BindTo, opts.Nft.URLPath))
 	http.Handle(opts.Nft.URLPath, promhttp.HandlerFor(reg, promhttp.HandlerOpts{}))
 	server := http.Server{
 		Addr:              opts.Nft.BindTo,
 		ReadHeaderTimeout: 1 * time.Minute,
 	}
-	log.Fatal(server.ListenAndServe())
+	slog.Error(server.ListenAndServe().Error())
 }
