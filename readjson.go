@@ -13,7 +13,7 @@ import (
 // Parse json to gjson object
 func parseJSON(data string) (gjson.Result, error) {
 	if !gjson.Valid(data) {
-		return gjson.Parse("{}"), errors.New("invalid JSON")
+		return gjson.Result{}, errors.New("invalid JSON")
 	}
 	return gjson.Get(data, "nftables"), nil
 }
@@ -23,7 +23,7 @@ func readFakeNFTables(opts options) (gjson.Result, error) {
 	slog.Debug("read fake nftables data from json", "path", opts.Nft.FakeNftJSON)
 	jsonFile, err := os.ReadFile(opts.Nft.FakeNftJSON)
 	if err != nil {
-		return gjson.Parse("{}"), fmt.Errorf("fake nftables data reading error: %w", err)
+		return gjson.Result{}, fmt.Errorf("fake nftables data reading error: %w", err)
 	}
 	return parseJSON(string(jsonFile))
 }
@@ -34,7 +34,7 @@ func readNFTables(opts options) (gjson.Result, error) {
 	nft := opts.Nft.NFTLocation
 	out, err := exec.Command(nft, "-j", "list", "ruleset").Output()
 	if err != nil {
-		return gjson.Parse("{}"), fmt.Errorf("nftables reading error: %w", err)
+		return gjson.Result{}, fmt.Errorf("nftables reading error: %w", err)
 	}
 	return parseJSON(string(out))
 }
