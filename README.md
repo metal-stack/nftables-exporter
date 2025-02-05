@@ -23,9 +23,13 @@ nftables_exporter:
   url_path: "/metrics"
   nft_location: /sbin/nft
   fake_nft_json: /path/to/nft.json
+  log_level: warn
 ```
 
 `fake_nft_json` used for debugging. I create this file with the command `nft -j list ruleset > /path/to/nft.json`. For normal exporter usage, this option is not needed.
+
+`log_level` can be one of the following: `debug`, `info`, `warn`, `error`.
+Default: `warn`.
 
 ## Example metrics
 
