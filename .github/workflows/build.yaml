@@ -34,7 +34,7 @@ jobs:
     - name: Ensure Go Version
       uses: actions/setup-go@v5
       with:
-        go-version: '1.23'
+        go-version: '1.24'
 
     - uses: google-github-actions/auth@v1
       with:
@@ -44,9 +44,9 @@ jobs:
       uses: google-github-actions/setup-gcloud@v0
 
     - name: Lint
-      uses: golangci/golangci-lint-action@v6
+      uses: golangci/golangci-lint-action@v7
       with:
-        args: --build-tags integration -p bugs -p unused --timeout=3m
+        args: --build-tags integration --timeout=3m
 
     - name: Make tag
       run: |
