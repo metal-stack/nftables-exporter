@@ -62,6 +62,16 @@ jobs:
       run: |
         make release GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }}
 
+    - name: Generate SBOM
+      uses: anchore/sbom-action@v0
+      env:
+        SBOM_NAME: sbom-${{ matrix.os }}-${{ matrix.arch }}.json
+      with:
+        path: ./bin/
+        format: spdx-json
+        artifact-name: ${{ env.SBOM_NAME }}
+        output-file: ./bin/${{ env.SBOM_NAME }}
+
     - name: Upload image tarballs to GCS
       run: |
         mkdir -p nftables-exporter/${TARGET_BINARY_LOCATION}
@@ -75,4 +85,5 @@ jobs:
         files: |
           bin/nftables-exporter*
           nftables-exporter*.tgz
+          bin/sbom-*.json
       if: ${{ github.event_name == 'release' }}
