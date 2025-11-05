@@ -48,7 +48,7 @@ func loadOptions() options {
 
 	opts := options{
 		nftOptions{
-			BindTo:      "9630",
+			BindTo:      ":9630",
 			URLPath:     "/metrics",
 			FakeNftJSON: "",
 			NFTLocation: "/sbin/nft",
