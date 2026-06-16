@@ -31,8 +31,7 @@ func readFakeNFTables(opts options) (gjson.Result, error) {
 // Get json from nftables and parse it
 func readNFTables(opts options) (gjson.Result, error) {
 	slog.Debug("collecting nftables counters...")
-	nft := opts.Nft.NFTLocation
-	out, err := exec.Command(nft, "-j", "list", "ruleset").Output()
+	out, err := exec.Command(opts.Nft.NFTLocation, "-j", "-t", "list", "ruleset").Output()
 	if err != nil {
 		return gjson.Result{}, fmt.Errorf("nftables reading error: %w", err)
 	}
