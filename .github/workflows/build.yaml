@@ -11,45 +11,30 @@ on:
     branches:
       - master
 
-env:
-  GCS_BUCKET: images.metal-pod.io
-
 jobs:
   draft:
     uses: metal-stack/actions-common/.github/workflows/release-drafter.yaml@v1
 
-  go-build-amd64:
-    uses: metal-stack/actions-common/.github/workflows/go-build.yaml@v1
+  go-build:
+    uses: metal-stack/actions-common/.github/workflows/go-build-multiarch.yaml@multiarch-builds
     secrets: inherit
     with:
-      dockerfile: Dockerfile.amd64
-      image-name: ${{ github.repository }}-amd64
-      build-command: make release GOARCH=amd64
+      platforms: |
+        [
+          {"platform": "linux/amd64", "goos": "linux", "goarch": "amd64", "runner": "ubuntu-latest"},
+          {"platform": "linux/arm64", "goos": "linux", "goarch": "arm64", "runner": "ubuntu-26.04-arm"}
+        ]
+      build-command: make release GOARCH=$GOARCH
       artifact-files: |
         bin/
-        nftables-exporter-linux-amd64.tgz
-
-  go-build-arm64:
-    uses: metal-stack/actions-common/.github/workflows/go-build.yaml@runs-on
-    secrets: inherit
-    with:
-      runs-on: ubuntu-26.04-arm
-      lint: false
-      test: false
-      dockerfile: Dockerfile.arm64
-      image-name: ${{ github.repository }}-arm64
-      build-command: make release GOARCH=arm64
-      artifact-files: |
-        bin/
-        nftables-exporter-linux-arm64.tgz
+        nftables-exporter-linux-*.tgz
 
   release-assets:
     uses: metal-stack/actions-common/.github/workflows/release-assets.yaml@v1
     needs:
-      - go-build-amd64
-      - go-build-arm64
+      - go-build
     with:
-      artifact-ids: ${{ needs.go-build-amd64.outputs.go-build-artifacts }},${{ needs.go-build-arm64.outputs.go-build-artifacts }}
+      artifact-ids: ${{ needs.go-build.outputs.go-build-artifacts }}
       files: |
-        ./go-build-artifact/bin/*
-        ./go-build-artifact/*
+        ./bin/*
+        ./nftables-exporter-linux-*.tgz

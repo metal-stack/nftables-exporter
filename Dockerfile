@@ -1,4 +1,5 @@
 FROM gcr.io/distroless/static-debian13
 COPY nftables_exporter.yaml /etc/nftables_exporter.yaml
-COPY bin/nftables-exporter-linux-amd64 /nftables-exporter
+ARG TARGETARCH
+COPY bin/nftables-exporter-linux-${TARGETARCH} /nftables-exporter
 CMD ["/nftables-exporter"]
