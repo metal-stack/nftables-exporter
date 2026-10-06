@@ -15,75 +15,37 @@ env:
   GCS_BUCKET: images.metal-pod.io
 
 jobs:
-  build:
-    name: Build
-    runs-on: ubuntu-latest
+  draft:
+    uses: metal-stack/actions-common/.github/workflows/release-drafter.yaml@v1
 
-    strategy:
-      matrix:
-        os:
-          - linux
-        arch:
-          - amd64
-          - arm64
+  go-build-amd64:
+    uses: metal-stack/actions-common/.github/workflows/go-build.yaml@v1
+    secrets: inherit
+    with:
+      dockerfile: Dockerfile.amd64
+      image-name: ${{ github.repository }}-amd64
+      build-command: make release GOARCH=amd64
+      artifact-files: |
+        bin/
+        nftables-exporter-linux-amd64.tgz
 
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v6
+  go-build-arm64:
+    uses: metal-stack/actions-common/.github/workflows/go-build.yaml@v1
+    secrets: inherit
+    with:
+      dockerfile: Dockerfile.arm64
+      image-name: ${{ github.repository }}-arm64
+      build-command: make release GOARCH=arm64
+      artifact-files: |
+        bin/
+        nftables-exporter-linux-arm64.tgz
 
-    - name: Ensure Go Version
-      uses: actions/setup-go@v6
-      with:
-        go-version: '1.26'
-
-    - uses: google-github-actions/auth@v1
-      with:
-        credentials_json: '${{ secrets.GCP_SA_KEY }}'
-
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v0
-
-    - name: Lint
-      uses: golangci/golangci-lint-action@v9
-      with:
-        args: --build-tags integration --timeout=3m
-
-    - name: Make tag
-      run: |
-        [ "${GITHUB_EVENT_NAME}" == 'pull_request' ] && echo "GITHUB_TAG_NAME=$(echo $GITHUB_REF | awk -F / '{print $3}')-${GITHUB_HEAD_REF##*/}" >> $GITHUB_ENV || true
-        [ "${GITHUB_EVENT_NAME}" == 'release' ] && echo "GITHUB_TAG_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV || true
-        [ "${GITHUB_EVENT_NAME}" == 'push' ] && echo "GITHUB_TAG_NAME=latest" >> $GITHUB_ENV || true
-
-        [ "${GITHUB_EVENT_NAME}" == 'pull_request' ] && echo "TARGET_BINARY_LOCATION=pull-requests/$(echo $GITHUB_REF | awk -F / '{print $3}')-${GITHUB_HEAD_REF##*/}" >> $GITHUB_ENV || true
-        [ "${GITHUB_EVENT_NAME}" == 'release' ] && echo "TARGET_BINARY_LOCATION=${GITHUB_REF##*/}" >> $GITHUB_ENV || true
-        [ "${GITHUB_EVENT_NAME}" == 'push' ] && echo "TARGET_BINARY_LOCATION=latest" >> $GITHUB_ENV || true
-
-    - name: Build project
-      run: |
-        make release GOOS=${{ matrix.os }} GOARCH=${{ matrix.arch }}
-
-    - name: Generate SBOM
-      uses: anchore/sbom-action@v0
-      env:
-        SBOM_NAME: sbom-${{ matrix.os }}-${{ matrix.arch }}.json
-      with:
-        path: ./bin/
-        format: spdx-json
-        artifact-name: ${{ env.SBOM_NAME }}
-        output-file: ./bin/${{ env.SBOM_NAME }}
-
-    - name: Upload image tarballs to GCS
-      run: |
-        mkdir -p nftables-exporter/${TARGET_BINARY_LOCATION}
-        cp bin/* nftables-exporter/${TARGET_BINARY_LOCATION}/
-        gsutil -m cp -r -p nftables-exporter gs://$GCS_BUCKET
-
-    - name: Upload Release Asset
-      uses: softprops/action-gh-release@v1
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        files: |
-          bin/nftables-exporter*
-          nftables-exporter*.tgz
-          bin/sbom-*.json
-      if: ${{ github.event_name == 'release' }}
+  release-assets:
+    uses: metal-stack/actions-common/.github/workflows/release-assets.yaml@v1
+    needs:
+      - go-build-amd64
+      - go-build-arm64
+    with:
+      artifact-ids: ${{ needs.go-build-amd64.outputs.go-build-artifacts }},${{ needs.go-build-arm64.outputs.go-build-artifacts }}
+      files: |
+        ./go-build-artifact/*
