@@ -31,6 +31,28 @@ nftables_exporter:
 `log_level` can be one of the following: `debug`, `info`, `warn`, `error`.
 Default: `warn`.
 
+### Set element count example
+
+`nftables_set_elements` reports the current number of entries in each named set (including empty IPv4 and IPv6 sets), labeled by `name`, `family`, and `table`. It reads nftables' `count` field, not `size` (which is the maximum capacity), so `nft -j -t list ruleset` can keep omitting set contents.
+
+For example, these set entries in the JSON ruleset (other entries omitted):
+
+```json
+{"nftables": [
+  {"set": {"family": "inet", "table": "filter", "name": "blocked_v4", "type": "ipv4_addr", "size": 100, "count": 0}},
+  {"set": {"family": "inet", "table": "filter", "name": "blocked_v6", "type": "ipv6_addr", "count": 2}}
+]}
+```
+
+produce the following metrics:
+
+```text
+# HELP nftables_set_elements Count elements in set
+# TYPE nftables_set_elements gauge
+nftables_set_elements{family="inet",name="blocked_v4",table="filter"} 0
+nftables_set_elements{family="inet",name="blocked_v6",table="filter"} 2
+```
+
 ## Example metrics
 
 ```config

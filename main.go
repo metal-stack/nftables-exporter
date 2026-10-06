@@ -22,6 +22,7 @@ func (i nftablesManagerCollector) Describe(ch chan<- *prometheus.Desc) {
 	ch <- upDesc
 	ch <- counterBytesDesc
 	ch <- counterPacketsDesc
+	ch <- setElementsDesc
 	ch <- tableChainsDesc
 	ch <- chainRulesDesc
 	ch <- ruleBytesDesc
