@@ -51,4 +51,5 @@ jobs:
     with:
       artifact-ids: ${{ needs.go-build-amd64.outputs.go-build-artifacts }},${{ needs.go-build-arm64.outputs.go-build-artifacts }}
       files: |
+        ./go-build-artifact/bin/*
         ./go-build-artifact/*
