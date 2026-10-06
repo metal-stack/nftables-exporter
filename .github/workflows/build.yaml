@@ -30,9 +30,12 @@ jobs:
         nftables-exporter-linux-amd64.tgz
 
   go-build-arm64:
-    uses: metal-stack/actions-common/.github/workflows/go-build.yaml@v1
+    uses: metal-stack/actions-common/.github/workflows/go-build.yaml@runs-on
     secrets: inherit
     with:
+      runs-on: ubuntu-26.04-arm
+      lint: false
+      test: false
       dockerfile: Dockerfile.arm64
       image-name: ${{ github.repository }}-arm64
       build-command: make release GOARCH=arm64
