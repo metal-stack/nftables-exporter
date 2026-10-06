@@ -27,6 +27,7 @@ func newNFTables(json gjson.Result, ch chan<- prometheus.Metric) nftables {
 // Collect metrics
 func (nft nftables) Collect() {
 	tables := nft.json.Get("#.table").Array()
+	sets := nft.json.Get("#.set").Array()
 	chains := nft.json.Get("#.chain").Array()
 	rules := nft.json.Get("#.rule").Array()
 	counters := nft.json.Get("#.counter").Array()
@@ -52,6 +53,20 @@ func (nft nftables) Collect() {
 			name,
 			table,
 			family,
+		)
+	}
+	for _, jSet := range sets {
+		count := jSet.Get("count")
+		if !count.Exists() {
+			continue
+		}
+		nft.ch <- prometheus.MustNewConstMetric(
+			setElementsDesc,
+			prometheus.GaugeValue,
+			count.Float(),
+			jSet.Get("name").String(),
+			jSet.Get("family").String(),
+			jSet.Get("table").String(),
 		)
 	}
 	for _, jTable := range tables {
