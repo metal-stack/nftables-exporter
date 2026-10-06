@@ -29,6 +29,16 @@ var (
 		},
 		nil,
 	)
+	setElementsDesc = prometheus.NewDesc(
+		"nftables_set_elements",
+		"Count elements in set",
+		[]string{
+			"name",
+			"family",
+			"table",
+		},
+		nil,
+	)
 	tableChainsDesc = prometheus.NewDesc(
 		"nftables_table_chains",
 		"Count chains in table",
