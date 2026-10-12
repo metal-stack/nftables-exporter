@@ -16,7 +16,7 @@ jobs:
     uses: metal-stack/actions-common/.github/workflows/release-drafter.yaml@v1
 
   go-build:
-    uses: metal-stack/actions-common/.github/workflows/go-build-multiarch.yaml@multiarch-builds
+    uses: metal-stack/actions-common/.github/workflows/go-build-multiarch.yaml@v1
     secrets: inherit
     with:
       platforms: |
