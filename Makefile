@@ -5,9 +5,9 @@ VERSION := $(or ${VERSION},$(shell git describe --tags --exact-match 2> /dev/nul
 
 GOFILES=$(wildcard *.go)
 GONAME=$(shell basename "$(PWD)")
-GOOS := linux
-GOARCH := amd64
-BINARY := $(GONAME)-$(GOOS)-$(GOARCH)
+GOOS ?= linux
+GOARCH ?= amd64
+BINARY := $(GONAME)-$(GOOS)-$(GOARCH)$(if $(GOARM),-v$(GOARM))
 
 build:
 	go build \

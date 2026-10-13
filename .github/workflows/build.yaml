@@ -22,7 +22,8 @@ jobs:
       platforms: |
         [
           {"platform": "linux/amd64", "goos": "linux", "goarch": "amd64", "runner": "ubuntu-latest"},
-          {"platform": "linux/arm64", "goos": "linux", "goarch": "arm64", "runner": "ubuntu-26.04-arm"}
+          {"platform": "linux/arm64", "goos": "linux", "goarch": "arm64", "runner": "ubuntu-26.04-arm"},
+          {"platform": "linux/arm/v7", "goos": "linux", "goarch": "arm", "goarm": "7", "runner": "ubuntu-26.04-arm"}
         ]
       build-command: make release GOARCH=$GOARCH
       artifact-files: |
