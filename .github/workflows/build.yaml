@@ -22,12 +22,12 @@ jobs:
       platforms: |
         [
           {"platform": "linux/amd64", "goos": "linux", "goarch": "amd64", "runner": "ubuntu-latest"},
-          {"platform": "linux/arm64", "goos": "linux", "goarch": "arm64", "runner": "ubuntu-26.04-arm"}
+          {"platform": "linux/arm64", "goos": "linux", "goarch": "arm64", "runner": "ubuntu-26.04-arm"},
+          {"platform": "linux/arm/v7", "goos": "linux", "goarch": "arm", "goarm": "7", "runner": "ubuntu-26.04-arm"}
         ]
       build-command: make release GOARCH=$GOARCH
       artifact-files: |
-        bin/
-        nftables-exporter-linux-*.tgz
+        bin/nftables-exporter-*
 
   release-assets:
     uses: metal-stack/actions-common/.github/workflows/release-assets.yaml@v1
@@ -36,5 +36,4 @@ jobs:
     with:
       artifact-ids: ${{ needs.go-build.outputs.go-build-artifacts }}
       files: |
-        ./bin/*
-        ./nftables-exporter-linux-*.tgz
+        nftables-exporter-*
