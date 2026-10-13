@@ -43,5 +43,5 @@ release: build
 	cd rel \
 	&& tar --transform="flags=r;s|-$(GOOS)-$(GOARCH)||" -cvzf $(BINARY).tgz \
 		usr/bin/nftables-exporter etc/systemd/system/nftables-exporter.service \
-	&& mv $(BINARY).tgz .. \
+	&& mv $(BINARY).tgz ../bin/ \
 	&& cd -

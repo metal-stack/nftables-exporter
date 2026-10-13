@@ -27,8 +27,7 @@ jobs:
         ]
       build-command: make release GOARCH=$GOARCH
       artifact-files: |
-        bin/
-        nftables-exporter-linux-*.tgz
+        bin/nftables-exporter-*
 
   release-assets:
     uses: metal-stack/actions-common/.github/workflows/release-assets.yaml@v1
@@ -38,4 +37,3 @@ jobs:
       artifact-ids: ${{ needs.go-build.outputs.go-build-artifacts }}
       files: |
         ./bin/*
-        ./nftables-exporter-linux-*.tgz
