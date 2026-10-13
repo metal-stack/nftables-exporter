@@ -36,4 +36,4 @@ jobs:
     with:
       artifact-ids: ${{ needs.go-build.outputs.go-build-artifacts }}
       files: |
-        ./bin/*
+        nftables-exporter-*
