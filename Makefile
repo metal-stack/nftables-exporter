@@ -38,10 +38,10 @@ release: build
 	rm -rf rel
 	rm -f nftables-exporter.tgz
 	mkdir -p rel/usr/bin rel/etc/systemd/system
-	cp bin/nftables-exporter-$(GOOS)-$(GOARCH) rel/usr/bin/nftables-exporter
+	cp bin/$(BINARY) rel/usr/bin/nftables-exporter
 	cp systemd/nftables-exporter.service rel/etc/systemd/system
 	cd rel \
-	&& tar --transform="flags=r;s|-$(GOOS)-$(GOARCH)||" -cvzf nftables-exporter-$(GOOS)-$(GOARCH).tgz \
+	&& tar --transform="flags=r;s|-$(GOOS)-$(GOARCH)||" -cvzf $(BINARY).tgz \
 		usr/bin/nftables-exporter etc/systemd/system/nftables-exporter.service \
-	&& mv nftables-exporter-$(GOOS)-$(GOARCH).tgz .. \
+	&& mv $(BINARY).tgz .. \
 	&& cd -
